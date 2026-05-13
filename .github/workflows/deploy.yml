@@ -6,7 +6,7 @@ on:
 
 jobs:
   notify-vps:
-    runs-on: Win-PS-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Send webhook to VPS
         run: |
