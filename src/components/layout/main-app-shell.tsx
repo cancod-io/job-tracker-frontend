@@ -71,7 +71,7 @@ export function MainAppShell({ children }: { children: ReactNode }) {
                 S
               </span>
               <span className="hidden min-w-0 truncate text-base font-semibold tracking-tight text-foreground sm:block">
-                Shopify Job Tracker
+                Shopify Job Tracker Test Deploy
               </span>
             </Link>
 
