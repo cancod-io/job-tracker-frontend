@@ -69,6 +69,7 @@ export function MainAppShell({ children }: { children: ReactNode }) {
               aria-label="TrackCod home"
               onClick={() => setMobileOpen(false)}
             >
+
               <span className="relative flex shrink-0 items-center">
                 <Image
                   src="/light-logo.png"
