@@ -19,8 +19,10 @@ const openSans = Open_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Shopify Job Tracker",
-  description: "Professional dashboard for tracking remote Shopify opportunities.",
+  title: "TrackCod",
+  icons: {
+    icon: "/icon.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
