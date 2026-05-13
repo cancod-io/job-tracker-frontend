@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
@@ -16,7 +17,7 @@ export function MainAppShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen flex-col bg-background">
       <div
         className={cn(
-          "fixed inset-0 z-40 bg-foreground/40 backdrop-blur-sm transition-opacity md:hidden",
+          "fixed inset-0 z-40 bg-foreground backdrop-blur-sm transition-opacity md:hidden",
           mobileOpen ? "opacity-100" : "pointer-events-none opacity-0",
         )}
         aria-hidden={!mobileOpen}
@@ -65,13 +66,26 @@ export function MainAppShell({ children }: { children: ReactNode }) {
             <Link
               href="/"
               className="group flex shrink-0 items-center gap-2"
+              aria-label="TrackCod home"
               onClick={() => setMobileOpen(false)}
             >
-              <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground shadow-sm sm:size-9">
-                S
-              </span>
-              <span className="hidden min-w-0 truncate text-base font-semibold tracking-tight text-foreground sm:block">
-                Shopify Job Tracker
+              <span className="relative flex shrink-0 items-center">
+                <Image
+                  src="/light-logo.png"
+                  alt=""
+                  width={220}
+                  height={56}
+                  className="h-10 w-auto max-w-[min(100%,11rem)] object-contain object-left dark:hidden sm:h-14 sm:max-w-[min(100%,13rem)]"
+                  priority
+                />
+                <Image
+                  src="/dark-logo.png"
+                  alt=""
+                  width={220}
+                  height={56}
+                  className="hidden h-10 w-auto max-w-[min(100%,11rem)] object-contain object-left dark:block sm:h-14 sm:max-w-[min(100%,13rem)]"
+                  priority
+                />
               </span>
             </Link>
 

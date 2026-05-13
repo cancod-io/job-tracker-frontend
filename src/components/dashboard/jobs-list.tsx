@@ -405,7 +405,7 @@ function JobCard({ job, viewMode, selected, onSelect }: JobCardProps) {
           )}
         >
           <div className="flex flex-wrap gap-2">
-            <button
+            {/* <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
@@ -415,13 +415,13 @@ function JobCard({ job, viewMode, selected, onSelect }: JobCardProps) {
             >
               <PanelRightClose className="size-3.5 shrink-0 opacity-70" aria-hidden />
               More detail
-            </button>
+            </button> */}
             <a
               href={job.applyUrl}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="hover:bg-primary/92 inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm transition-[transform,background-color] active:scale-[0.98] motion-reduce:active:scale-100 min-[360px]:flex-none"
+              className="w-full hover:bg-primary/92 inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm transition-[transform,background-color] active:scale-[0.98] motion-reduce:active:scale-100 min-[360px]:flex-none"
               aria-label={`Apply to ${job.title} at ${job.company} (opens in a new tab)`}
             >
               Apply
