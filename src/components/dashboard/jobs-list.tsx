@@ -1,15 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Bookmark,
   Building2,
   CalendarClock,
+  ChevronLeft,
+  ChevronRight,
   ExternalLink,
   LayoutGrid,
   List,
   MapPin,
-  PanelRightClose,
   Search,
   X,
   Zap,
@@ -28,7 +30,44 @@ type ViewMode = "list" | "card";
 
 type DetailPhase = "closed" | "entering" | "open" | "leaving";
 
+/** URL + UI sort mode; ordering is applied in the browser, not via the jobs API. */
+type JobsListSortMode = "relevance" | "newest";
+
 const PAGE_SIZE = 20;
+
+const URL_PAGE_KEY = "page";
+const URL_SORT_KEY = "sort";
+
+function parsePageFromSearchParams(sp: URLSearchParams): number {
+  const raw = sp.get(URL_PAGE_KEY);
+  if (!raw) return 1;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) && n >= 1 ? n : 1;
+}
+
+function parseSortFromSearchParams(sp: URLSearchParams): JobsListSortMode {
+  return sp.get(URL_SORT_KEY) === "newest" ? "newest" : "relevance";
+}
+
+function buildJobsListHref(
+  pathname: string,
+  base: URLSearchParams,
+  patch: { page?: number; sort?: JobsListSortMode },
+): string {
+  const params = new URLSearchParams(base.toString());
+  const page = patch.page ?? parsePageFromSearchParams(params);
+  const sort = patch.sort ?? parseSortFromSearchParams(params);
+
+  if (page <= 1) params.delete(URL_PAGE_KEY);
+  else params.set(URL_PAGE_KEY, String(page));
+
+  if (sort === "relevance") params.delete(URL_SORT_KEY);
+  else params.set(URL_SORT_KEY, sort);
+
+  const qs = params.toString();
+  const hash = pathname === "/" ? "#jobs" : "";
+  return qs ? `${pathname}?${qs}${hash}` : `${pathname}${hash}`;
+}
 
 /** Must match Tailwind `duration-[…ms]` on the overlay / sheet. */
 const DETAIL_TRANSITION_MS = 320;
@@ -69,6 +108,29 @@ function matchesFilters(
   return matchesText && matchesExperience && matchesType;
 }
 
+function sortJobsClient(jobs: Job[], mode: JobsListSortMode): Job[] {
+  const copy = [...jobs];
+  if (mode === "newest") {
+    copy.sort((a, b) => {
+      const t = b.sortPostedAtMs - a.sortPostedAtMs;
+      if (t !== 0) return t;
+      return Number(b.id) - Number(a.id);
+    });
+  } else {
+    copy.sort((a, b) => {
+      const ra = a.shopifyRelevanceScore;
+      const rb = b.shopifyRelevanceScore;
+      const aScore = ra == null || Number.isNaN(ra) ? Number.NEGATIVE_INFINITY : ra;
+      const bScore = rb == null || Number.isNaN(rb) ? Number.NEGATIVE_INFINITY : rb;
+      if (bScore !== aScore) return bScore - aScore;
+      const t = b.sortPostedAtMs - a.sortPostedAtMs;
+      if (t !== 0) return t;
+      return Number(b.id) - Number(a.id);
+    });
+  }
+  return copy;
+}
+
 function companyInitials(company: string): string {
   const parts = company.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
@@ -87,21 +149,6 @@ function externalHref(url: string): string {
   if (!t) return "#";
   if (/^https?:\/\//i.test(t)) return t;
   return `https://${t}`;
-}
-
-/** Pulls a few readable lines from a long job description for the card body. */
-function extractHighlightLines(description: string, max = 3): string[] {
-  const lines = description
-    .split(/\r?\n/)
-    .map((l) => l.replace(/^[•\-\*]\s*/, "").trim())
-    .filter((l) => l.length > 0 && l.length < 320);
-  const out: string[] = [];
-  for (const line of lines) {
-    if (out.length >= max) break;
-    if (/^(overview|responsibilities|requirements|description)\b[:：]?\s*$/i.test(line)) continue;
-    out.push(line.length > 180 ? `${line.slice(0, 177)}…` : line);
-  }
-  return out;
 }
 
 function isInteractiveCardTarget(target: EventTarget | null): boolean {
@@ -262,8 +309,6 @@ type JobCardProps = {
 };
 
 function JobCard({ job, viewMode, selected, onSelect }: JobCardProps) {
-  const highlights = useMemo(() => extractHighlightLines(job.description), [job.description]);
-
   function handleCardClick(e: React.MouseEvent<HTMLElement>) {
     if (isInteractiveCardTarget(e.target)) return;
     onSelect();
@@ -459,6 +504,11 @@ function JobCard({ job, viewMode, selected, onSelect }: JobCardProps) {
 }
 
 export function JobsList() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const searchParamsKey = searchParams.toString();
+
   const { query, experience, jobType } = useJobFiltersStore();
   const [viewMode, setViewMode] = useState<ViewMode>("card");
   const [debouncedQuery, setDebouncedQuery] = useState(query);
@@ -472,9 +522,18 @@ export function JobsList() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fetchGeneration = useRef(0);
+  const prevDebouncedQueryForPageReset = useRef(debouncedQuery);
+
+  const urlPage = useMemo(
+    () => parsePageFromSearchParams(new URLSearchParams(searchParamsKey)),
+    [searchParamsKey],
+  );
+  const urlSort = useMemo(
+    () => parseSortFromSearchParams(new URLSearchParams(searchParamsKey)),
+    [searchParamsKey],
+  );
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedQuery(query), 400);
@@ -482,23 +541,40 @@ export function JobsList() {
   }, [query]);
 
   useEffect(() => {
+    if (prevDebouncedQueryForPageReset.current === debouncedQuery) return;
+    prevDebouncedQueryForPageReset.current = debouncedQuery;
+    const sp = new URLSearchParams(searchParams.toString());
+    if (parsePageFromSearchParams(sp) <= 1) return;
+    router.replace(buildJobsListHref(pathname, sp, { page: 1 }), { scroll: false });
+  }, [debouncedQuery, pathname, router, searchParams]);
+
+  useEffect(() => {
     const gen = ++fetchGeneration.current;
     (async () => {
       setLoading(true);
       setError(null);
+      setSelectedId(null);
       try {
-        const data = await fetchJobsList({
-          limit: PAGE_SIZE,
-          offset: 0,
-          sort: "relevance",
-          include_inactive: false,
-          include_duplicates: false,
-          q: debouncedQuery.trim() || undefined,
-        });
+        const aggregated: Job[] = [];
+        let offset = 0;
+        let serverTotal = 0;
+        while (true) {
+          const data = await fetchJobsList({
+            limit: PAGE_SIZE,
+            offset,
+            include_inactive: false,
+            include_duplicates: false,
+            q: debouncedQuery.trim() || undefined,
+          });
+          if (gen !== fetchGeneration.current) return;
+          serverTotal = data.total;
+          aggregated.push(...data.items.map(mapApiJobListItemToJob));
+          offset += data.items.length;
+          if (data.items.length === 0 || offset >= serverTotal) break;
+        }
         if (gen !== fetchGeneration.current) return;
-        setTotal(data.total);
-        setJobs(data.items.map(mapApiJobListItemToJob));
-        setSelectedId(null);
+        setTotal(serverTotal);
+        setJobs(aggregated);
       } catch (e) {
         if (gen !== fetchGeneration.current) return;
         setError(e instanceof Error ? e.message : "Could not load jobs.");
@@ -510,16 +586,22 @@ export function JobsList() {
     })();
   }, [debouncedQuery]);
 
-  const filteredJobs = useMemo(
-    () => jobs.filter((job) => matchesFilters(job, query, experience, jobType)),
-    [jobs, query, experience, jobType],
-  );
-  const companyCount = new Set(filteredJobs.map((j) => j.company)).size;
+  const sortedFilteredJobs = useMemo(() => {
+    const filtered = jobs.filter((job) => matchesFilters(job, query, experience, jobType));
+    return sortJobsClient(filtered, urlSort);
+  }, [jobs, query, experience, jobType, urlSort]);
 
-  const selectedJob = useMemo(
-    () => (selectedId ? filteredJobs.find((j) => j.id === selectedId) ?? null : null),
-    [filteredJobs, selectedId],
+  const companyCount = useMemo(
+    () => new Set(sortedFilteredJobs.map((j) => j.company)).size,
+    [sortedFilteredJobs],
   );
+
+  const totalPages = Math.max(1, Math.ceil(sortedFilteredJobs.length / PAGE_SIZE));
+
+  const pagedJobs = useMemo(() => {
+    const start = (urlPage - 1) * PAGE_SIZE;
+    return sortedFilteredJobs.slice(start, start + PAGE_SIZE);
+  }, [sortedFilteredJobs, urlPage]);
 
   detailPhaseRef.current = detailPhase;
 
@@ -549,7 +631,7 @@ export function JobsList() {
       prevSelectedRef.current = null;
       return;
     }
-    const job = filteredJobs.find((j) => j.id === selectedId);
+    const job = sortedFilteredJobs.find((j) => j.id === selectedId);
     if (!job) {
       setSelectedId(null);
       return;
@@ -566,7 +648,7 @@ export function JobsList() {
       return () => cancelAnimationFrame(id);
     }
     setDetailPhase("open");
-  }, [selectedId, filteredJobs]);
+  }, [selectedId, sortedFilteredJobs]);
 
   useEffect(() => {
     if (!detailJob) return;
@@ -582,28 +664,17 @@ export function JobsList() {
     };
   }, [detailJob, closeDetail]);
 
-  const canLoadMore = jobs.length < total;
+  useEffect(() => {
+    if (loading) return;
+    const maxPage = Math.max(1, Math.ceil(sortedFilteredJobs.length / PAGE_SIZE));
+    if (urlPage <= maxPage) return;
+    const sp = new URLSearchParams(searchParamsKey);
+    router.replace(buildJobsListHref(pathname, sp, { page: maxPage }), { scroll: false });
+  }, [loading, pathname, router, searchParamsKey, sortedFilteredJobs.length, urlPage]);
 
-  async function handleLoadMore() {
-    if (!canLoadMore || loadingMore) return;
-    setLoadingMore(true);
-    setError(null);
-    try {
-      const data = await fetchJobsList({
-        limit: PAGE_SIZE,
-        offset: jobs.length,
-        sort: "relevance",
-        include_inactive: false,
-        include_duplicates: false,
-        q: debouncedQuery.trim() || undefined,
-      });
-      setTotal(data.total);
-      setJobs((prev) => [...prev, ...data.items.map(mapApiJobListItemToJob)]);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load more jobs.");
-    } finally {
-      setLoadingMore(false);
-    }
+  function navigateList(patch: { page?: number; sort?: JobsListSortMode }) {
+    const sp = new URLSearchParams(searchParamsKey);
+    router.push(buildJobsListHref(pathname, sp, patch), { scroll: false });
   }
 
   return (
@@ -612,8 +683,8 @@ export function JobsList() {
       className="scroll-mt-24 md:scroll-mt-28"
       aria-labelledby="jobs-heading"
     >
-      <div className="flex flex-col gap-4 pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0 space-y-1">
+      <div className="flex flex-col gap-4 pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+        <div className="min-w-0 flex-1 space-y-1">
           <h2
             id="jobs-heading"
             className="text-lg font-semibold tracking-tight text-foreground md:text-xl"
@@ -625,56 +696,81 @@ export function JobsList() {
               "Loading…"
             ) : (
               <>
-                {filteredJobs.length} {filteredJobs.length === 1 ? "job" : "jobs"}
+                {sortedFilteredJobs.length}{" "}
+                {sortedFilteredJobs.length === 1 ? "job" : "jobs"}
                 <span className="mx-1 text-muted-foreground/50" aria-hidden>
                   ·
                 </span>
                 {companyCount} {companyCount === 1 ? "company" : "companies"}
-                {total > jobs.length ? (
+                {!loading && jobs.length > 0 ? (
                   <>
                     <span className="mx-1 text-muted-foreground/50" aria-hidden>
                       ·
                     </span>
-                    {jobs.length} of {total} loaded
+                    Page {urlPage} of {totalPages}
+                    <span className="mx-1 text-muted-foreground/50" aria-hidden>
+                      ·
+                    </span>
+                    {total} {total === 1 ? "listing" : "listings"} from server
                   </>
                 ) : null}
               </>
             )}
           </p>
         </div>
-        <div
-          className="inline-flex shrink-0 rounded-full border border-input bg-muted/50 p-1 shadow-sm"
-          role="group"
-          aria-label="Job list layout"
-        >
-          <button
-            type="button"
-            onClick={() => setViewMode("list")}
-            aria-pressed={viewMode === "list"}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors duration-200 motion-reduce:transition-none",
-              viewMode === "list"
-                ? "bg-background text-foreground shadow-sm ring-1 ring-border/80"
-                : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
-            )}
+        <div className="flex flex-wrap items-end justify-end gap-3 sm:shrink-0">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <label htmlFor="jobs-sort" className="text-xs font-medium text-foreground">
+              Sort
+            </label>
+            <select
+              id="jobs-sort"
+              value={urlSort}
+              onChange={(e) => {
+                const next: JobsListSortMode = e.target.value === "newest" ? "newest" : "relevance";
+                navigateList({ sort: next, page: 1 });
+              }}
+              className="form-control h-10 min-w-[10.5rem] cursor-pointer rounded-xl text-sm shadow-sm sm:min-w-[11rem]"
+              aria-label="Sort job listings"
+            >
+              <option value="relevance">Relevance</option>
+              <option value="newest">Newest</option>
+            </select>
+          </div>
+          <div
+            className="inline-flex shrink-0 rounded-full border border-input bg-muted/50 p-1 shadow-sm"
+            role="group"
+            aria-label="Job list layout"
           >
-            <List className="size-3.5 shrink-0" aria-hidden />
-            List
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("card")}
-            aria-pressed={viewMode === "card"}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors duration-200 motion-reduce:transition-none",
-              viewMode === "card"
-                ? "bg-background text-foreground shadow-sm ring-1 ring-border/80"
-                : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
-            )}
-          >
-            <LayoutGrid className="size-3.5 shrink-0" aria-hidden />
-            Cards
-          </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              aria-pressed={viewMode === "list"}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors duration-200 motion-reduce:transition-none",
+                viewMode === "list"
+                  ? "bg-background text-foreground shadow-sm ring-1 ring-border/80"
+                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+              )}
+            >
+              <List className="size-3.5 shrink-0" aria-hidden />
+              List
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("card")}
+              aria-pressed={viewMode === "card"}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors duration-200 motion-reduce:transition-none",
+                viewMode === "card"
+                  ? "bg-background text-foreground shadow-sm ring-1 ring-border/80"
+                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+              )}
+            >
+              <LayoutGrid className="size-3.5 shrink-0" aria-hidden />
+              Cards
+            </button>
+          </div>
         </div>
       </div>
 
@@ -695,7 +791,7 @@ export function JobsList() {
             : "grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr))]",
         )}
       >
-        {filteredJobs.map((job) => (
+        {pagedJobs.map((job) => (
           <JobCard
             key={job.id}
             job={job}
@@ -705,7 +801,7 @@ export function JobsList() {
           />
         ))}
 
-        {!loading && filteredJobs.length === 0 ? (
+        {!loading && sortedFilteredJobs.length === 0 ? (
           <div
             className="rounded-2xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground"
             role="status"
@@ -715,7 +811,7 @@ export function JobsList() {
               ? "No jobs match your current filters. Adjust search criteria to discover more roles."
               : total === 0
                 ? "No job listings are available from the server yet."
-                : "No jobs match your current filters. Try loading more or broadening your search."}
+                : "No jobs match your current filters. Try another page or broadening your search."}
           </div>
         ) : null}
       </div>
@@ -757,18 +853,65 @@ export function JobsList() {
         </div>
       ) : null}
 
-      {!loading && canLoadMore ? (
-        <div className="flex justify-center pt-1">
-          <button
-            type="button"
-            onClick={() => void handleLoadMore()}
-            disabled={loadingMore}
-            className="inline-flex min-h-10 items-center justify-center rounded-full border border-input bg-background px-6 text-sm font-medium text-secondary-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
-          >
-            {loadingMore ? "Loading…" : "Load more"}
-          </button>
-        </div>
+      {!loading && totalPages > 1 ? (
+        <nav
+          className="flex flex-col items-center justify-center gap-3 border-t border-border/60 pt-5 sm:flex-row sm:justify-between"
+          aria-label="Job results pagination"
+        >
+          <p className="order-2 text-xs tabular-nums text-muted-foreground sm:order-1">
+            Page <span className="font-medium text-foreground">{urlPage}</span> of{" "}
+            <span className="font-medium text-foreground">{totalPages}</span>
+          </p>
+          <div className="order-1 flex items-center gap-2 sm:order-2">
+            <button
+              type="button"
+              onClick={() => navigateList({ page: urlPage - 1 })}
+              disabled={urlPage <= 1}
+              className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-input bg-background px-4 text-sm font-medium text-secondary-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+            >
+              <ChevronLeft className="size-4 shrink-0" aria-hidden />
+              Previous
+            </button>
+            <button
+              type="button"
+              onClick={() => navigateList({ page: urlPage + 1 })}
+              disabled={urlPage >= totalPages}
+              className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-input bg-background px-4 text-sm font-medium text-secondary-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+            >
+              Next
+              <ChevronRight className="size-4 shrink-0" aria-hidden />
+            </button>
+          </div>
+        </nav>
       ) : null}
+    </section>
+  );
+}
+
+/** Shown by `Suspense` while `useSearchParams` resolves (required by Next.js). */
+export function JobsListSkeleton() {
+  return (
+    <section
+      id="jobs"
+      className="scroll-mt-24 md:scroll-mt-28"
+      aria-busy="true"
+      aria-label="Loading job listings"
+    >
+      <div className="flex flex-col gap-4 pb-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="h-7 w-40 animate-pulse rounded-lg bg-muted md:h-8 md:w-48" />
+          <div className="h-4 w-64 max-w-full animate-pulse rounded-md bg-muted/80" />
+        </div>
+        <div className="flex flex-wrap items-end justify-end gap-3">
+          <div className="h-10 w-44 animate-pulse rounded-xl bg-muted" />
+          <div className="h-10 w-[11rem] animate-pulse rounded-full bg-muted/80" />
+        </div>
+      </div>
+      <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr))]">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-64 animate-pulse rounded-2xl border border-border/60 bg-muted/30" />
+        ))}
+      </div>
     </section>
   );
 }
