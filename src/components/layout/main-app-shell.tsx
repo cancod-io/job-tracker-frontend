@@ -77,7 +77,7 @@ export function MainAppShell({ children }: { children: ReactNode }) {
                   width={220}
                   height={56}
                   className="h-10 w-auto max-w-[min(100%,11rem)] object-contain object-left dark:hidden sm:h-14 sm:max-w-[min(100%,13rem)]"
-                  priority
+                  
                 />
                 <img
                   src="/dark-logo.png"
@@ -85,7 +85,7 @@ export function MainAppShell({ children }: { children: ReactNode }) {
                   width={220}
                   height={56}
                   className="hidden h-10 w-auto max-w-[min(100%,11rem)] object-contain object-left dark:block sm:h-14 sm:max-w-[min(100%,13rem)]"
-                  priority
+                  
                 />
               </span>
             </Link>
