@@ -1,5 +1,5 @@
-import { FilterToolbar } from "@/components/dashboard/filter-toolbar";
-import { JobsList } from "@/components/dashboard/jobs-list";
+import { Suspense } from "react";
+import { JobsList, JobsListSkeleton } from "@/components/dashboard/jobs-list";
 import { AppShell } from "@/components/layout/app-shell";
 
 export default function HomePage() {
@@ -15,7 +15,9 @@ export default function HomePage() {
         <div className="flex flex-col gap-5 md:gap-6">
           {/* <FilterToolbar /> */}
           {/* <ApplicationsPanel /> */}
-          <JobsList />
+          <Suspense fallback={<JobsListSkeleton />}>
+            <JobsList />
+          </Suspense>
         </div>
       </AppShell>
     </>

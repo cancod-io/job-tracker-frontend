@@ -16,6 +16,23 @@ function looksLikeRelativeHumanLabel(s: string): boolean {
   return false;
 }
 
+/** Posted time for sorting (newest first). Prefer parseable dates over purely human labels. */
+function postedAtSortMilliseconds(item: ApiJobListItem): number {
+  const human = item.raw_payload?.job_posted_at?.trim();
+  if (human) {
+    const parsed = Date.parse(human);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  for (const iso of [item.posted_at, item.discovered_at, item.created_at]) {
+    const t = iso?.trim();
+    if (t) {
+      const parsed = Date.parse(t);
+      if (!Number.isNaN(parsed)) return parsed;
+    }
+  }
+  return 0;
+}
+
 function buildPostedLabel(item: ApiJobListItem): string {
   const human = item.raw_payload?.job_posted_at?.trim();
   if (human) {
@@ -46,6 +63,9 @@ export function mapApiJobListItemToJob(item: ApiJobListItem): Job {
     company: item.company?.trim() || "—",
     logoUrl: item.company_logo_url?.trim() || null,
     datePosted: buildPostedLabel(item),
+    sortPostedAtMs: postedAtSortMilliseconds(item),
+    shopifyRelevanceScore:
+      item.shopify_relevance_score == null ? null : Number(item.shopify_relevance_score),
     location,
     skills: (item.skills ?? []).map((s) => String(s).trim()).filter(Boolean),
     experienceLevel: item.experience_level?.trim() || "—",

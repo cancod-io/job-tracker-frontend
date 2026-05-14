@@ -20,6 +20,10 @@ export type Job = {
   logoUrl: string | null;
   /** Short label for the card header (e.g. “5 days ago”, relative ISO). */
   datePosted: string;
+  /** Best-effort posted time for client-side “newest” sort (ms since epoch; 0 if unknown). */
+  sortPostedAtMs: number;
+  /** API Shopify relevance score; null sorts after scored rows when sorting by relevance. */
+  shopifyRelevanceScore: number | null;
   location: string;
   skills: string[];
   /** Raw label from the API; toolbar filters normalize against this text. */
