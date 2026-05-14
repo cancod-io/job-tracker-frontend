@@ -71,7 +71,7 @@ export function MainAppShell({ children }: { children: ReactNode }) {
             >
 
               <span className="relative flex shrink-0 items-center">
-                <Image
+                <img
                   src="/light-logo.png"
                   alt=""
                   width={220}
@@ -79,7 +79,7 @@ export function MainAppShell({ children }: { children: ReactNode }) {
                   className="h-10 w-auto max-w-[min(100%,11rem)] object-contain object-left dark:hidden sm:h-14 sm:max-w-[min(100%,13rem)]"
                   priority
                 />
-                <Image
+                <img
                   src="/dark-logo.png"
                   alt=""
                   width={220}
