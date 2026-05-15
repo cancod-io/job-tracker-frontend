@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { JOBS_PATH } from "@/config/auth-routes";
 import { userPrimaryNav } from "@/config/user-nav";
 import { UserNavLink } from "@/components/layout/user-nav-link";
 import { UserProfileMenu } from "@/components/layout/user-profile-menu";
@@ -64,7 +65,7 @@ export function MainAppShell({ children }: { children: ReactNode }) {
         <div className="flex h-14 w-full items-center justify-between gap-3 px-4 sm:h-16 sm:gap-4 sm:px-6 lg:px-8 xl:px-10">
           <div className="flex min-w-0 flex-1 items-center gap-6 lg:gap-10">
             <Link
-              href="/"
+              href={JOBS_PATH}
               className="group flex shrink-0 items-center gap-2"
               aria-label="TrackCod home"
               onClick={() => setMobileOpen(false)}

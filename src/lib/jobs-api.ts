@@ -18,6 +18,7 @@ function appendJobsQueryParams(search: URLSearchParams, params: FetchJobsListPar
   if (company) search.set("company", company);
   const location = params.location?.trim();
   if (location) search.set("location", location);
+  if (params.ats_status) search.set("ats_status", params.ats_status);
 }
 
 export async function fetchJobsList(params: FetchJobsListParams = {}): Promise<ApiJobListResponse> {

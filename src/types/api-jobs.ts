@@ -51,10 +51,21 @@ export type ApiJobListResponse = {
 
 export type ApiJobsListSort = "relevance" | "newest";
 
+export const API_JOB_ATS_STATUSES = [
+  "new",
+  "shortlisted",
+  "applied",
+  "interviewing",
+  "offer",
+  "rejected",
+  "archived",
+] as const satisfies readonly ApiJobAtsStatus[];
+
 export type FetchJobsListParams = {
   limit?: number;
   offset?: number;
   sort?: ApiJobsListSort;
+  ats_status?: ApiJobAtsStatus;
   include_inactive?: boolean;
   include_duplicates?: boolean;
   q?: string;

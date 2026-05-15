@@ -8,7 +8,7 @@ export default function SavedJobsPage() {
       <PageHeader
         title="Saved jobs"
         description="Jobs you bookmark from the dashboard will be listed here for quick revisit and batch applying."
-        breadcrumbs={[{ label: "Jobs", href: "/" }, { label: "Saved jobs" }]}
+        breadcrumbs={[{ label: "Jobs", href: "/jobs" }, { label: "Saved jobs" }]}
         actions={
           <Link
             href="/#jobs"

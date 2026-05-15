@@ -4,13 +4,14 @@ import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import { JOBS_PATH, LOGIN_PATH } from "@/config/auth-routes";
 import { useAuth } from "@/providers/auth-provider";
 
 function UserRegisterFormInner() {
   const { status, register } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get("next") ?? "/";
+  const nextPath = searchParams.get("next") ?? JOBS_PATH;
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -70,7 +71,7 @@ function UserRegisterFormInner() {
         </div>
         <p className="text-center text-sm text-muted-foreground">
           <Link
-            href="/login"
+            href={"/zxc-3"}
             className="font-semibold text-primary underline-offset-4 hover:underline"
           >
             Back to sign in
@@ -207,25 +208,14 @@ function UserRegisterFormInner() {
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link
-          href="/login"
+          href={"/zxc-3"}
           className="font-semibold text-primary underline-offset-4 hover:underline"
         >
           Sign in
         </Link>
       </p>
 
-      <p className="text-center text-xs text-muted-foreground">
-        <Link href="/" className="font-medium text-primary underline-offset-4 hover:underline">
-          Back to job board
-        </Link>
-        <span className="mx-2 text-border">·</span>
-        <a
-          href={`${process.env.NEXT_PUBLIC_ADMIN_APP_URL ?? "http://localhost:3001"}/register`}
-          className="font-medium text-primary underline-offset-4 hover:underline"
-        >
-          Admin registration
-        </a>
-      </p>
+
     </div>
   );
 }
