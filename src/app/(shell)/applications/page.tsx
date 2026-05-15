@@ -15,7 +15,7 @@ export default function ApplicationsPage() {
       <PageHeader
         title="My applications"
         description="Track statuses from applied to interview. Data will sync with the API in a follow-up milestone."
-        breadcrumbs={[{ label: "Jobs", href: "/" }, { label: "Applications" }]}
+        breadcrumbs={[{ label: "Jobs", href: "/jobs" }, { label: "Applications" }]}
         actions={
           <Link
             href="/#jobs"

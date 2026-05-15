@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, LogOut, Settings, UserRound } from "lucide-react";
+import { LOGIN_PATH, REGISTER_PATH } from "@/config/auth-routes";
 import { useAuth } from "@/providers/auth-provider";
 import { cn } from "@/lib/utils";
 
@@ -47,13 +48,13 @@ export function UserProfileMenu() {
     return (
       <div className="flex items-center gap-1">
         <Link
-          href="/register"
+          href={REGISTER_PATH}
           className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           Register
         </Link>
         <Link
-          href="/login"
+          href={LOGIN_PATH}
           className="hover:bg-primary/92 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm"
         >
           Sign in

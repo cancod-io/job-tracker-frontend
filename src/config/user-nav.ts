@@ -7,7 +7,7 @@ export type UserNavItem = {
 };
 
 export const userPrimaryNav: UserNavItem[] = [
-  { href: "/", label: "Jobs", icon: LayoutGrid },
+  { href: "/jobs", label: "Jobs", icon: LayoutGrid },
   { href: "/applications", label: "Applications", icon: Briefcase },
   { href: "/saved", label: "Saved jobs", icon: Bookmark },
   { href: "/about", label: "About", icon: Sparkles },

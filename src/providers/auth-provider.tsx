@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { assertUserApproved } from "@/lib/auth-approval";
 import { apiErrorCode, apiErrorMessage } from "@/lib/auth-errors";
 import { apiUrl } from "@/lib/api";
 import { fetchWithTimeout } from "@/lib/http";
@@ -72,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     try {
       const me = await fetchMe(token);
+      assertUserApproved(me);
       setAccessToken(token);
       setUser(me);
       setStatus("authenticated");
@@ -118,10 +120,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw e;
     }
     const data = (await res.json()) as TokenResponse;
+    const me = await fetchMe(data.access_token);
+    try {
+      assertUserApproved(me);
+    } catch (e) {
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+      }
+      throw e;
+    }
     if (typeof window !== "undefined") {
       window.sessionStorage.setItem(TOKEN_STORAGE_KEY, data.access_token);
     }
-    const me = await fetchMe(data.access_token);
     setAccessToken(data.access_token);
     setUser(me);
     setStatus("authenticated");
