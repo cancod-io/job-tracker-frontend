@@ -75,4 +75,4 @@ Components land in `src/components/ui/` and are owned by this repo (no library l
 - **shadcn over raw Tailwind components.**
 - **Strict TypeScript** is on (`strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`).
 
-Workflow Test V1.0.4
+Workflow Test V1.1.0
