@@ -74,3 +74,5 @@ Components land in `src/components/ui/` and are owned by this repo (no library l
 - **Types mirror the backend.** Hand-maintained in `src/types/` from the Pydantic schemas — keep them in sync.
 - **shadcn over raw Tailwind components.**
 - **Strict TypeScript** is on (`strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`).
+
+Workflow Test V1.0.2
