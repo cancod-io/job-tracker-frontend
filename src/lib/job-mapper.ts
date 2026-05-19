@@ -16,33 +16,51 @@ function looksLikeRelativeHumanLabel(s: string): boolean {
   return false;
 }
 
-/** Posted time for sorting (newest first). Prefer parseable dates over purely human labels. */
-function postedAtSortMilliseconds(item: ApiJobListItem): number {
-  const human = item.raw_payload?.job_posted_at?.trim();
-  if (human) {
-    const parsed = Date.parse(human);
-    if (!Number.isNaN(parsed)) return parsed;
+function parseTimestampMs(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed || looksLikeRelativeHumanLabel(trimmed)) return null;
+  const parsed = Date.parse(trimmed);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+/** Canonical posted time from API fields (not stale scrape labels in raw_payload). */
+function canonicalPostedTimestampMs(item: ApiJobListItem): number | null {
+  for (const field of [item.posted_at, item.discovered_at, item.created_at]) {
+    const t = field?.trim();
+    if (!t) continue;
+    const ms = parseTimestampMs(t);
+    if (ms != null) return ms;
   }
-  for (const iso of [item.posted_at, item.discovered_at, item.created_at]) {
-    const t = iso?.trim();
-    if (t) {
-      const parsed = Date.parse(t);
-      if (!Number.isNaN(parsed)) return parsed;
-    }
+  return null;
+}
+
+/** Posted time for sorting (newest first). */
+function postedAtSortMilliseconds(item: ApiJobListItem): number {
+  const canonical = canonicalPostedTimestampMs(item);
+  if (canonical != null) return canonical;
+
+  const fallback = item.raw_payload?.job_posted_at?.trim();
+  if (fallback) {
+    const ms = parseTimestampMs(fallback);
+    if (ms != null) return ms;
   }
   return 0;
 }
 
 function buildPostedLabel(item: ApiJobListItem): string {
-  const human = item.raw_payload?.job_posted_at?.trim();
-  if (human) {
-    if (looksLikeRelativeHumanLabel(human)) return human;
-    const parsed = Date.parse(human);
-    if (!Number.isNaN(parsed)) return formatRelativeTime(new Date(parsed).toISOString());
-    return human;
+  const canonicalMs = canonicalPostedTimestampMs(item);
+  if (canonicalMs != null) {
+    return formatRelativeTime(new Date(canonicalMs).toISOString());
   }
-  const iso = item.posted_at?.trim() || item.discovered_at?.trim() || item.created_at?.trim();
-  if (iso) return formatRelativeTime(iso);
+
+  const fallback = item.raw_payload?.job_posted_at?.trim();
+  if (fallback) {
+    if (looksLikeRelativeHumanLabel(fallback)) return fallback;
+    const ms = parseTimestampMs(fallback);
+    if (ms != null) return formatRelativeTime(new Date(ms).toISOString());
+    return fallback;
+  }
+
   return "—";
 }
 

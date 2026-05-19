@@ -392,7 +392,7 @@ function JobDetailPanel({ job, onClose }: JobDetailPanelProps) {
 
         {job.skills.length > 0 ? (
           <div>
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="mb-2 text-[11px]  uppercase tracking-wide text-muted-foreground">
               Skills
             </p>
             <ul className="flex flex-wrap gap-2" aria-label="Skills">
@@ -409,7 +409,7 @@ function JobDetailPanel({ job, onClose }: JobDetailPanelProps) {
         ) : null}
 
         <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">
             Description
           </p>
           {job.description ? (
@@ -469,9 +469,8 @@ function JobCard({ job, viewMode, selected, onSelect }: JobCardProps) {
     if (isInteractiveCardTarget(e.target)) return;
     onSelect();
   }
-
   const badgeOutline =
-    "inline-flex items-center rounded-full border border-border/90 bg-background/80 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground";
+    "inline-flex items-center rounded-full border border-border/90 bg-background/80 px-2.5 py-0.5 text-[11px] uppercase tracking-wide text-muted-foreground";
 
   const cardShell = cn(
     "rounded-2xl border bg-card text-left shadow-sm outline-none transition-[transform,box-shadow,border-color,background-color] duration-200 motion-reduce:transition-none",
@@ -513,9 +512,9 @@ function JobCard({ job, viewMode, selected, onSelect }: JobCardProps) {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="text-[15px] leading-snug tracking-tight text-foreground line-clamp-2 md:text-base">
+                  <h4 className="text-[15px] leading-snug tracking-tight text-foreground line-clamp-2 md:text-base">
                     {job.title}
-                  </h3>
+                  </h4>
                   <span className="shrink-0 tabular-nums text-[11px] font-medium text-muted-foreground">
                     {job.datePosted}
                   </span>
@@ -550,7 +549,7 @@ function JobCard({ job, viewMode, selected, onSelect }: JobCardProps) {
             ) : null}
             <span
               className={cn(
-                "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
+                "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] uppercase tracking-wide",
                 jobAtsStatusBadgeClass(job.atsStatus),
               )}
             >
@@ -582,7 +581,7 @@ function JobCard({ job, viewMode, selected, onSelect }: JobCardProps) {
             <ul className="flex flex-wrap gap-1.5" aria-label="Key skills">
               {job.skills.slice(0, 10).map((skill) => (
                 <li key={skill}>
-                  <span className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
+                  <span className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-muted/30 px-2 py-0.5 text-[11px] font-xs text-secondary-foreground">
                     {skill}
                   </span>
                 </li>
@@ -738,6 +737,7 @@ export function JobsList() {
           include_duplicates: false,
           q: debouncedQuery.trim() || undefined,
         });
+        console.log(data)
         if (gen !== fetchGeneration.current) return;
         setTotal(data.total);
         setJobs(data.items.map(mapApiJobListItemToJob));
@@ -855,7 +855,7 @@ export function JobsList() {
         <div className="min-w-0 flex-1 space-y-1">
           <h2
             id="jobs-heading"
-            className="text-lg font-semibold tracking-tight text-foreground md:text-xl"
+            className="text-lg tracking-tight text-foreground md:text-xl"
           >
             Job listings
           </h2>
