@@ -1,3 +1,4 @@
+import { authRequestHeaders } from "@/lib/auth-token";
 import { fetchWithTimeout } from "@/lib/http";
 import type { ApiJobListResponse, FetchJobsListParams } from "@/types/api-jobs";
 
@@ -27,7 +28,7 @@ export async function fetchJobsList(params: FetchJobsListParams = {}): Promise<A
 
   /** Same-origin Next route proxies to the real API — avoids browser CORS for any dev host/IP. */
   const res = await fetchWithTimeout(`/api/v1/jobs?${search.toString()}`, {
-    headers: { Accept: "application/json" },
+    headers: authRequestHeaders(),
     credentials: "omit",
   });
 

@@ -13,12 +13,16 @@ export async function OPTIONS() {
 export async function GET(req: NextRequest) {
   const qs = req.nextUrl.searchParams.toString();
   const upstream = `${getInternalApiBase()}/api/v1/jobs${qs ? `?${qs}` : ""}`;
+  const auth = req.headers.get("authorization");
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 15_000);
 
   try {
     const res = await fetch(upstream, {
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        ...(auth ? { Authorization: auth } : {}),
+      },
       cache: "no-store",
       signal: ctrl.signal,
     });
