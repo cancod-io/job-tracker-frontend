@@ -10,8 +10,11 @@ import {
   type ReactNode,
 } from "react";
 import { assertUserApproved } from "@/lib/auth-approval";
-import { apiErrorCode, apiErrorMessage } from "@/lib/auth-errors";
-import { apiUrl } from "@/lib/api";
+import {
+  apiErrorMessage,
+  networkErrorMessage,
+  resolveLoginError,
+} from "@/lib/auth-errors";
 import { fetchWithTimeout } from "@/lib/http";
 import type { AuthUser, RegisterResult, TokenResponse } from "@/types/auth";
 
@@ -38,7 +41,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 async function fetchMe(token: string): Promise<AuthUser> {
-  const res = await fetchWithTimeout(apiUrl("/api/v1/auth/me"), {
+  const res = await fetchWithTimeout("/api/v1/auth/me", {
     headers: { Authorization: `Bearer ${token}` },
     credentials: "omit",
   });
@@ -92,30 +95,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     let res: Response;
     try {
-      res = await fetchWithTimeout(apiUrl("/api/v1/auth/login"), {
+      res = await fetchWithTimeout("/api/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
     } catch (e) {
-      if (e instanceof Error && e.name === "AbortError") {
-        throw new Error(
-          "Could not reach the API (timed out). Set NEXT_PUBLIC_API_URL to a URL your browser can open (e.g. http://localhost:8000).",
-        );
+      const networkMsg = networkErrorMessage(e);
+      if (networkMsg) {
+        throw new Error(networkMsg);
       }
       throw e;
     }
     if (!res.ok) {
-      const err = (await res.json().catch(() => ({}))) as {
-        error?: { message?: string; code?: string };
-        detail?: unknown;
-      };
-      const message =
-        apiErrorMessage(err) ??
-        (typeof err.detail === "string" ? err.detail : null) ??
-        "Sign-in failed";
+      const err = (await res.json().catch(() => ({}))) as Parameters<
+        typeof resolveLoginError
+      >[0];
+      const { message, code } = resolveLoginError(err);
       const e = new Error(message) as Error & { code?: string };
-      const code = apiErrorCode(err);
       if (code) e.code = code;
       throw e;
     }
@@ -141,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (payload: RegisterPayload): Promise<RegisterResult> => {
       let res: Response;
       try {
-        res = await fetchWithTimeout(apiUrl("/api/v1/auth/register"), {
+        res = await fetchWithTimeout("/api/v1/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -153,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         if (e instanceof Error && e.name === "AbortError") {
           throw new Error(
-            "Could not reach the API (timed out). Set NEXT_PUBLIC_API_URL to a URL your browser can open (e.g. http://localhost:8000).",
+            "Could not reach the API (timed out). The Next.js server must reach your backend — set API_INTERNAL_URL in .env.local to the API address used from this machine (e.g. http://127.0.0.1:8000).",
           );
         }
         throw e;

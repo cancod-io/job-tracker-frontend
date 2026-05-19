@@ -1,5 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getInternalApiBase } from "@/lib/api";
+import { CORS_HEADERS, optionsResponse } from "@/lib/cors";
+
+export async function OPTIONS() {
+  return optionsResponse();
+}
 
 /**
  * Same-origin proxy for `GET /api/v1/jobs` so browsers never cross-origin call
@@ -8,23 +13,35 @@ import { getInternalApiBase } from "@/lib/api";
 export async function GET(req: NextRequest) {
   const qs = req.nextUrl.searchParams.toString();
   const upstream = `${getInternalApiBase()}/api/v1/jobs${qs ? `?${qs}` : ""}`;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15_000);
 
   try {
     const res = await fetch(upstream, {
       headers: { Accept: "application/json" },
       cache: "no-store",
+      signal: ctrl.signal,
     });
     const body = await res.text();
     return new NextResponse(body, {
       status: res.status,
       headers: {
         "Content-Type": res.headers.get("content-type") ?? "application/json",
+        ...CORS_HEADERS,
       },
     });
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      return NextResponse.json(
+        { detail: "Request to backend timed out. Check API_INTERNAL_URL." },
+        { status: 504, headers: CORS_HEADERS },
+      );
+    }
     return NextResponse.json(
       { detail: "Could not reach the jobs API. Check API_INTERNAL_URL / NEXT_PUBLIC_API_URL and network." },
-      { status: 502 },
+      { status: 502, headers: CORS_HEADERS },
     );
+  } finally {
+    clearTimeout(timer);
   }
 }

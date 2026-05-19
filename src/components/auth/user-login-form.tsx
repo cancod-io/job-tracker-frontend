@@ -5,8 +5,17 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { JOBS_PATH, REGISTER_PATH } from "@/config/auth-routes";
+import { LOGIN_ERROR_MESSAGES } from "@/lib/auth-errors";
 import { useAuth } from "@/providers/auth-provider";
 import { cn } from "@/lib/utils";
+
+function clearFieldError(
+  setError: (v: string | null) => void,
+  setErrorCode: (v: string | null) => void,
+) {
+  setError(null);
+  setErrorCode(null);
+}
 
 function UserLoginFormInner() {
   const { status, login } = useAuth();
@@ -26,13 +35,26 @@ function UserLoginFormInner() {
     }
   }, [status, router, nextPath]);
 
+  function validateBeforeSubmit(): boolean {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
+      setErrorCode("MISSING_CREDENTIALS");
+      setError(LOGIN_ERROR_MESSAGES.MISSING_CREDENTIALS);
+      return false;
+    }
+    return true;
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setErrorCode(null);
+    if (!validateBeforeSubmit()) {
+      return;
+    }
     setSubmitting(true);
     try {
-      await login(email, password);
+      await login(email.trim(), password);
       router.replace(nextPath.startsWith("/") ? nextPath : `/${nextPath}`);
     } catch (err) {
       const code =
@@ -80,7 +102,10 @@ function UserLoginFormInner() {
             autoComplete="email"
             required
             value={email}
-            onChange={(ev) => setEmail(ev.target.value)}
+            onChange={(ev) => {
+              setEmail(ev.target.value);
+              if (error) clearFieldError(setError, setErrorCode);
+            }}
             className="form-control w-full"
             disabled={submitting}
           />
@@ -97,7 +122,10 @@ function UserLoginFormInner() {
             required
             minLength={8}
             value={password}
-            onChange={(ev) => setPassword(ev.target.value)}
+            onChange={(ev) => {
+              setPassword(ev.target.value);
+              if (error) clearFieldError(setError, setErrorCode);
+            }}
             className="form-control w-full"
             disabled={submitting}
           />
@@ -139,7 +167,7 @@ function UserLoginFormInner() {
       <p className="text-center text-sm text-muted-foreground">
         New here?{" "}
         <Link
-          href={'/yui-1'}
+          href={REGISTER_PATH}
           className="font-semibold text-primary underline-offset-4 hover:underline"
         >
           Create an account
