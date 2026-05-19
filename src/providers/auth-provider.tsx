@@ -15,10 +15,9 @@ import {
   networkErrorMessage,
   resolveLoginError,
 } from "@/lib/auth-errors";
+import { TOKEN_STORAGE_KEY } from "@/lib/auth-token";
 import { fetchWithTimeout } from "@/lib/http";
 import type { AuthUser, RegisterResult, TokenResponse } from "@/types/auth";
-
-const TOKEN_STORAGE_KEY = "sjt_user_access_token";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
