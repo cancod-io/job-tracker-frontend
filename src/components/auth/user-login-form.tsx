@@ -5,16 +5,41 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { JOBS_PATH, REGISTER_PATH } from "@/config/auth-routes";
-import { LOGIN_ERROR_MESSAGES } from "@/lib/auth-errors";
+import { isLoginAuthError, LOGIN_ERROR_CODES, type LoginField } from "@/lib/auth-errors";
+import { notify } from "@/lib/notify";
 import { useAuth } from "@/providers/auth-provider";
-import { cn } from "@/lib/utils";
 
-function clearFieldError(
-  setError: (v: string | null) => void,
-  setErrorCode: (v: string | null) => void,
-) {
-  setError(null);
-  setErrorCode(null);
+type InvalidFields = Partial<Record<LoginField, true>>;
+
+const MISSING_FIELDS_MESSAGE = "Email or password is missing";
+
+function emptyInvalidFields(): InvalidFields {
+  return {};
+}
+
+function notifyLoginFailure(err: unknown, setInvalidFields: (v: InvalidFields) => void) {
+  if (isLoginAuthError(err)) {
+    const fields = err.fields ?? [];
+    if (fields.length > 0) {
+      const next: InvalidFields = {};
+      for (const field of fields) {
+        next[field] = true;
+      }
+      setInvalidFields(next);
+    } else {
+      setInvalidFields(emptyInvalidFields());
+    }
+
+    const code = err.code ?? null;
+    if (code === LOGIN_ERROR_CODES.PENDING_APPROVAL) {
+      notify.warning(err.message);
+    } else {
+      notify.error(err.message);
+    }
+    return;
+  }
+  setInvalidFields(emptyInvalidFields());
+  notify.error(err instanceof Error ? err.message : "Sign-in failed");
 }
 
 function UserLoginFormInner() {
@@ -25,8 +50,7 @@ function UserLoginFormInner() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [invalidFields, setInvalidFields] = useState<InvalidFields>(emptyInvalidFields);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -35,11 +59,24 @@ function UserLoginFormInner() {
     }
   }, [status, router, nextPath]);
 
+  function clearInvalidFields() {
+    setInvalidFields(emptyInvalidFields());
+  }
+
+  function clearFieldInvalid(field: LoginField) {
+    setInvalidFields((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }
+
   function validateBeforeSubmit(): boolean {
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) {
-      setErrorCode("MISSING_CREDENTIALS");
-      setError(LOGIN_ERROR_MESSAGES.MISSING_CREDENTIALS);
+      setInvalidFields({ email: true, password: true });
+      notify.error(MISSING_FIELDS_MESSAGE);
       return false;
     }
     return true;
@@ -47,8 +84,7 @@ function UserLoginFormInner() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
-    setErrorCode(null);
+    clearInvalidFields();
     if (!validateBeforeSubmit()) {
       return;
     }
@@ -57,10 +93,7 @@ function UserLoginFormInner() {
       await login(email.trim(), password);
       router.replace(nextPath.startsWith("/") ? nextPath : `/${nextPath}`);
     } catch (err) {
-      const code =
-        err instanceof Error ? (err as Error & { code?: string }).code ?? null : null;
-      setErrorCode(code);
-      setError(err instanceof Error ? err.message : "Sign-in failed");
+      notifyLoginFailure(err, setInvalidFields);
     } finally {
       setSubmitting(false);
     }
@@ -100,16 +133,17 @@ function UserLoginFormInner() {
             name="email"
             type="email"
             autoComplete="email"
-            required
             value={email}
             onChange={(ev) => {
               setEmail(ev.target.value);
-              if (error) clearFieldError(setError, setErrorCode);
+              clearFieldInvalid("email");
             }}
             className="form-control w-full"
             disabled={submitting}
+            aria-invalid={invalidFields.email ? true : undefined}
           />
         </div>
+
         <div className="space-y-2">
           <label htmlFor="user-password" className="text-sm font-medium text-foreground">
             Password
@@ -119,31 +153,16 @@ function UserLoginFormInner() {
             name="password"
             type="password"
             autoComplete="current-password"
-            required
-            minLength={8}
             value={password}
             onChange={(ev) => {
               setPassword(ev.target.value);
-              if (error) clearFieldError(setError, setErrorCode);
+              clearFieldInvalid("password");
             }}
             className="form-control w-full"
             disabled={submitting}
+            aria-invalid={invalidFields.password ? true : undefined}
           />
         </div>
-
-        {error ? (
-          <p
-            className={cn(
-              "rounded-lg border px-3 py-2 text-sm",
-              errorCode === "PENDING_APPROVAL" || errorCode === "ACCOUNT_REJECTED"
-                ? "border-amber-500/40 bg-amber-500/10 text-amber-950 dark:text-amber-100"
-                : "border-destructive/30 bg-destructive/10 text-destructive",
-            )}
-            role="alert"
-          >
-            {error}
-          </p>
-        ) : null}
 
         <button
           type="submit"
@@ -173,8 +192,6 @@ function UserLoginFormInner() {
           Create an account
         </Link>
       </p>
-
-
     </div>
   );
 }

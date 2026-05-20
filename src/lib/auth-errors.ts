@@ -1,17 +1,43 @@
 /** Stable API error codes from backend `AppError`. */
 
+export type LoginField = "email" | "password";
+
 export type ApiAuthErrorShape = {
-  error?: { message?: string; code?: string; details?: unknown };
+  error?: {
+    message?: string;
+    code?: string;
+    details?: LoginErrorDetails | unknown;
+  };
   detail?: unknown;
 };
 
-export const LOGIN_ERROR_MESSAGES = {
-  MISSING_CREDENTIALS: "Email or password is missing",
-  INVALID_PASSWORD: "Your password is incorrect",
-  INVALID_EMAIL: "Please enter a valid email address",
+export type LoginErrorDetails = {
+  field?: LoginField;
+  fields?: LoginField[];
+};
+
+/** Known login error codes from `POST /api/v1/auth/login`. */
+export const LOGIN_ERROR_CODES = {
+  LOGIN_FIELDS_MISSING: "LOGIN_FIELDS_MISSING",
+  INVALID_EMAIL: "INVALID_EMAIL",
+  INCORRECT_PASSWORD: "INCORRECT_PASSWORD",
+  PENDING_APPROVAL: "PENDING_APPROVAL",
+  ACCOUNT_REJECTED: "ACCOUNT_REJECTED",
 } as const;
 
-export type LoginErrorCode = keyof typeof LOGIN_ERROR_MESSAGES;
+export type LoginErrorCode = (typeof LOGIN_ERROR_CODES)[keyof typeof LOGIN_ERROR_CODES];
+
+export type ResolvedLoginError = {
+  message: string;
+  code: string | null;
+  /** Inputs that should be marked invalid (message is shown via toast). */
+  fields: LoginField[];
+};
+
+export type LoginAuthError = Error & {
+  code?: string | null;
+  fields?: LoginField[];
+};
 
 export function apiErrorMessage(data: ApiAuthErrorShape): string | null {
   const msg = data.error?.message;
@@ -23,39 +49,67 @@ export function apiErrorCode(data: ApiAuthErrorShape): string | null {
   return typeof c === "string" && c.length > 0 ? c : null;
 }
 
-function isLoginErrorCode(code: string): code is LoginErrorCode {
-  return code in LOGIN_ERROR_MESSAGES;
+function parseLoginErrorDetails(details: unknown): LoginErrorDetails {
+  if (!details || typeof details !== "object") return {};
+  const d = details as Record<string, unknown>;
+  const field =
+    d.field === "email" || d.field === "password" ? (d.field as LoginField) : undefined;
+  const fields = Array.isArray(d.fields)
+    ? d.fields.filter((f): f is LoginField => f === "email" || f === "password")
+    : undefined;
+  return { field, fields };
 }
 
-function validationDetailsIndicateEmailIssue(details: unknown): boolean {
-  if (!Array.isArray(details)) return false;
-  return details.some((item) => {
-    if (!item || typeof item !== "object") return false;
-    const loc = (item as { loc?: unknown }).loc;
-    return Array.isArray(loc) && loc.some((part) => part === "email");
-  });
+function fieldsFromCodeAndDetails(
+  code: string | null,
+  details: LoginErrorDetails,
+): LoginField[] {
+  const out: LoginField[] = [];
+  if (details.field) out.push(details.field);
+  if (details.fields?.length) out.push(...details.fields);
+  const unique = [...new Set(out)];
+  if (unique.length > 0) return unique;
+
+  switch (code) {
+    case LOGIN_ERROR_CODES.INVALID_EMAIL:
+      return ["email"];
+    case LOGIN_ERROR_CODES.INCORRECT_PASSWORD:
+      return ["password"];
+    case LOGIN_ERROR_CODES.LOGIN_FIELDS_MISSING:
+      return ["email", "password"];
+    default:
+      return [];
+  }
 }
 
-/** Map API / network failures to user-facing login messages. */
+export function isFormLevelLoginCode(code: string | null): boolean {
+  return (
+    code === LOGIN_ERROR_CODES.PENDING_APPROVAL || code === LOGIN_ERROR_CODES.ACCOUNT_REJECTED
+  );
+}
+
+/** Map login API JSON to message + code + target field(s). Prefer API `message`; branch on `code`. */
 export function resolveLoginError(
   data: ApiAuthErrorShape,
   fallback = "Sign-in failed",
-): { message: string; code: string | null } {
+): ResolvedLoginError {
   const code = apiErrorCode(data);
-  if (code && isLoginErrorCode(code)) {
-    return { message: LOGIN_ERROR_MESSAGES[code], code };
-  }
-  if (code === "VALIDATION_ERROR" && validationDetailsIndicateEmailIssue(data.error?.details)) {
-    return { message: LOGIN_ERROR_MESSAGES.INVALID_EMAIL, code: "INVALID_EMAIL" };
-  }
-  const apiMessage = apiErrorMessage(data);
-  if (apiMessage) {
-    return { message: apiMessage, code };
-  }
-  if (typeof data.detail === "string" && data.detail.length > 0) {
-    return { message: data.detail, code };
-  }
-  return { message: fallback, code };
+  const details = parseLoginErrorDetails(data.error?.details);
+  const message = apiErrorMessage(data) ?? (typeof data.detail === "string" ? data.detail : fallback);
+  const fields = isFormLevelLoginCode(code) ? [] : fieldsFromCodeAndDetails(code, details);
+
+  return { message, code, fields };
+}
+
+export function createLoginAuthError(resolved: ResolvedLoginError): LoginAuthError {
+  const err = new Error(resolved.message) as LoginAuthError;
+  err.code = resolved.code;
+  err.fields = resolved.fields;
+  return err;
+}
+
+export function isLoginAuthError(err: unknown): err is LoginAuthError {
+  return err instanceof Error && ("code" in err || "fields" in err);
 }
 
 export function networkErrorMessage(err: unknown): string | null {
