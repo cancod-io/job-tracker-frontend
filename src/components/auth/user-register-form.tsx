@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
-import { JOBS_PATH } from "@/config/auth-routes";
+import { JOBS_PATH, LOGIN_PATH } from "@/config/auth-routes";
 import {
   MIN_PASSWORD_LENGTH,
   PasswordFieldsGroup,
@@ -181,7 +181,7 @@ function UserRegisterFormInner() {
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link
-          href={"/zxc-3"}
+          href={LOGIN_PATH}
           className="font-semibold text-primary underline-offset-4 hover:underline"
         >
           Sign in
