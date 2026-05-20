@@ -21,6 +21,7 @@ import {
   jobAtsStatusLabel,
 } from "@/lib/application-status-badge";
 import { fetchJobsList } from "@/lib/jobs-api";
+import { notify } from "@/lib/notify";
 import { mapApiJobListItemToJob } from "@/lib/job-mapper";
 import { cn } from "@/lib/utils";
 import { useJobFiltersStore } from "@/store/job-filters";
@@ -677,7 +678,6 @@ export function JobsList() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const fetchGeneration = useRef(0);
   const prevDebouncedQueryForPageReset = useRef(debouncedQuery);
   const prevExperienceForPageReset = useRef(experience);
@@ -725,7 +725,6 @@ export function JobsList() {
     const offset = (urlPage - 1) * urlPerPage;
     (async () => {
       setLoading(true);
-      setError(null);
       setSelectedId(null);
       try {
         const data = await fetchJobsList({
@@ -737,13 +736,12 @@ export function JobsList() {
           include_duplicates: false,
           q: debouncedQuery.trim() || undefined,
         });
-        console.log(data)
         if (gen !== fetchGeneration.current) return;
         setTotal(data.total);
         setJobs(data.items.map(mapApiJobListItemToJob));
       } catch (e) {
         if (gen !== fetchGeneration.current) return;
-        setError(e instanceof Error ? e.message : "Could not load jobs.");
+        notify.error(e instanceof Error ? e.message : "Could not load jobs.");
         setJobs([]);
         setTotal(0);
       } finally {
@@ -981,15 +979,6 @@ export function JobsList() {
         paginationItems={paginationItems}
         navigateList={navigateList}
       />
-
-      {error ? (
-        <div
-          className="rounded-2xl border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
-          role="alert"
-        >
-          {error}
-        </div>
-      ) : null}
 
       <div
         className={cn(

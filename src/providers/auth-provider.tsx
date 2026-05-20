@@ -12,10 +12,11 @@ import {
 import { assertUserApproved } from "@/lib/auth-approval";
 import {
   apiErrorMessage,
+  createLoginAuthError,
   networkErrorMessage,
   resolveLoginError,
 } from "@/lib/auth-errors";
-import { TOKEN_STORAGE_KEY } from "@/lib/auth-token";
+import { clearStoredTokens, setStoredTokens, TOKEN_STORAGE_KEY } from "@/lib/auth-token";
 import { fetchWithTimeout } from "@/lib/http";
 import type { AuthUser, RegisterResult, TokenResponse } from "@/types/auth";
 
@@ -56,9 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
   const logout = useCallback(() => {
-    if (typeof window !== "undefined") {
-      window.sessionStorage.removeItem(TOKEN_STORAGE_KEY);
-    }
+    clearStoredTokens();
     setAccessToken(null);
     setUser(null);
     setStatus("unauthenticated");
@@ -80,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(me);
       setStatus("authenticated");
     } catch {
-      window.sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+      clearStoredTokens();
       setAccessToken(null);
       setUser(null);
       setStatus("unauthenticated");
@@ -99,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
+      console.log("res", res);
     } catch (e) {
       const networkMsg = networkErrorMessage(e);
       if (networkMsg) {
@@ -110,24 +110,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const err = (await res.json().catch(() => ({}))) as Parameters<
         typeof resolveLoginError
       >[0];
-      const { message, code } = resolveLoginError(err);
-      const e = new Error(message) as Error & { code?: string };
-      if (code) e.code = code;
-      throw e;
+      throw createLoginAuthError(resolveLoginError(err));
     }
     const data = (await res.json()) as TokenResponse;
     const me = await fetchMe(data.access_token);
     try {
       assertUserApproved(me);
     } catch (e) {
-      if (typeof window !== "undefined") {
-        window.sessionStorage.removeItem(TOKEN_STORAGE_KEY);
-      }
+      clearStoredTokens();
       throw e;
     }
-    if (typeof window !== "undefined") {
-      window.sessionStorage.setItem(TOKEN_STORAGE_KEY, data.access_token);
-    }
+    setStoredTokens(data.access_token, data.refresh_token);
     setAccessToken(data.access_token);
     setUser(me);
     setStatus("authenticated");

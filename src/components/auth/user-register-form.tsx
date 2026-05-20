@@ -5,6 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { JOBS_PATH, LOGIN_PATH } from "@/config/auth-routes";
+import {
+  MIN_PASSWORD_LENGTH,
+  PasswordFieldsGroup,
+} from "@/components/auth/password-fields-group";
+import { notify } from "@/lib/notify";
 import { useAuth } from "@/providers/auth-provider";
 
 function UserRegisterFormInner() {
@@ -17,7 +22,7 @@ function UserRegisterFormInner() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [showPasswordErrors, setShowPasswordErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
@@ -27,13 +32,17 @@ function UserRegisterFormInner() {
     }
   }, [status, router, nextPath]);
 
+  const passwordsValid =
+    password.length >= MIN_PASSWORD_LENGTH && password === confirm;
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
-    if (password !== confirm) {
-      setError("Passwords do not match.");
+    setShowPasswordErrors(true);
+
+    if (!passwordsValid) {
       return;
     }
+
     setSubmitting(true);
     try {
       const result = await register({ email, full_name: fullName.trim(), password });
@@ -43,7 +52,7 @@ function UserRegisterFormInner() {
       }
       router.replace(nextPath.startsWith("/") ? nextPath : `/${nextPath}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed");
+      notify.error(err instanceof Error ? err.message : "Registration failed");
     } finally {
       setSubmitting(false);
     }
@@ -140,51 +149,15 @@ function UserRegisterFormInner() {
             disabled={submitting}
           />
         </div>
-        <div className="space-y-2">
-          <label htmlFor="reg-password" className="text-sm font-medium text-foreground">
-            Password
-          </label>
-          <input
-            id="reg-password"
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={8}
-            maxLength={128}
-            value={password}
-            onChange={(ev) => setPassword(ev.target.value)}
-            className="form-control w-full"
-            disabled={submitting}
-          />
-          <p className="text-xs text-muted-foreground">At least 8 characters.</p>
-        </div>
-        <div className="space-y-2">
-          <label htmlFor="reg-confirm" className="text-sm font-medium text-foreground">
-            Confirm password
-          </label>
-          <input
-            id="reg-confirm"
-            name="confirm_password"
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={8}
-            value={confirm}
-            onChange={(ev) => setConfirm(ev.target.value)}
-            className="form-control w-full"
-            disabled={submitting}
-          />
-        </div>
 
-        {error ? (
-          <p
-            className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-            role="alert"
-          >
-            {error}
-          </p>
-        ) : null}
+        <PasswordFieldsGroup
+          password={password}
+          confirm={confirm}
+          onPasswordChange={setPassword}
+          onConfirmChange={setConfirm}
+          disabled={submitting}
+          showAllErrors={showPasswordErrors}
+        />
 
         <button
           type="submit"
@@ -208,14 +181,12 @@ function UserRegisterFormInner() {
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link
-          href={"/zxc-3"}
+          href={LOGIN_PATH}
           className="font-semibold text-primary underline-offset-4 hover:underline"
         >
           Sign in
         </Link>
       </p>
-
-
     </div>
   );
 }
