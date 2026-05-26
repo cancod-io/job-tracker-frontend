@@ -266,6 +266,18 @@
   }
 }
 
+/* ── Apply banner animation ─────────────────────────────────────────────────── */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 /* ── About page animations ─────────────────────────────────────────────────── */
 @keyframes float-orb {
   0%,

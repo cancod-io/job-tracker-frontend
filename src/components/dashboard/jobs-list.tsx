@@ -6,6 +6,7 @@ import {
   Bookmark,
   Building2,
   CalendarClock,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
@@ -25,6 +26,7 @@ import { notify } from "@/lib/notify";
 import { mapApiJobListItemToJob } from "@/lib/job-mapper";
 import { cn } from "@/lib/utils";
 import { useJobFiltersStore } from "@/store/job-filters";
+import { useApplicationsStore } from "@/store/applications-store";
 import { API_JOB_ATS_STATUSES, type ApiJobAtsStatus } from "@/types/api-jobs";
 import type { ExperienceLevel, Job, JobType } from "@/types/job";
 
@@ -313,6 +315,64 @@ function isInteractiveCardTarget(target: EventTarget | null): boolean {
   return Boolean(target.closest("a, button"));
 }
 
+type ApplyConfirmBannerProps = {
+  jobTitle: string;
+  company: string;
+  onConfirm: () => void;
+  onDismiss: () => void;
+  confirming: boolean;
+};
+
+function ApplyConfirmBanner({
+  jobTitle,
+  company,
+  onConfirm,
+  onDismiss,
+  confirming,
+}: ApplyConfirmBannerProps) {
+  return (
+    <div
+      className="fixed bottom-6 left-1/2 z-[60] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 animate-[slide-up_0.25s_ease-out]"
+      role="alertdialog"
+      aria-live="assertive"
+      aria-label="Confirm application"
+    >
+      <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-foreground px-4 py-3.5 shadow-2xl dark:bg-zinc-900">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/20">
+            <CheckCircle2 className="size-4 text-primary" aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-background dark:text-foreground">
+              Mark as applied?
+            </p>
+            <p className="truncate text-xs text-background/70 dark:text-muted-foreground">
+              {jobTitle} · {company}
+            </p>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={confirming}
+            className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3.5 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
+          >
+            {confirming ? "Saving…" : "Yes"}
+          </button>
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="inline-flex h-8 items-center justify-center rounded-lg border border-background/20 px-3 text-xs font-medium text-background/80 transition-colors hover:bg-background/10 dark:border-border dark:text-muted-foreground dark:hover:bg-muted/40"
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type JobDetailPanelProps = {
   job: Job;
   onClose: () => void;
@@ -463,9 +523,10 @@ type JobCardProps = {
   viewMode: ViewMode;
   selected: boolean;
   onSelect: () => void;
+  onApplyClick: (job: Job) => void;
 };
 
-function JobCard({ job, viewMode, selected, onSelect }: JobCardProps) {
+function JobCard({ job, viewMode, selected, onSelect, onApplyClick }: JobCardProps) {
   function handleCardClick(e: React.MouseEvent<HTMLElement>) {
     if (isInteractiveCardTarget(e.target)) return;
     onSelect();
@@ -606,28 +667,18 @@ function JobCard({ job, viewMode, selected, onSelect }: JobCardProps) {
           )}
         >
           <div className="flex flex-wrap gap-2">
-            {/* <button
+            <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                onSelect();
+                onApplyClick(job);
               }}
-              className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3 text-xs font-semibold text-foreground shadow-sm transition-colors hover:bg-muted min-[360px]:flex-none"
-            >
-              <PanelRightClose className="size-3.5 shrink-0 opacity-70" aria-hidden />
-              More detail
-            </button> */}
-            <a
-              href={job.applyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
               className="w-full hover:bg-primary/92 inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm transition-[transform,background-color] active:scale-[0.98] motion-reduce:active:scale-100 min-[360px]:flex-none"
-              aria-label={`Apply to ${job.title} at ${job.company} (opens in a new tab)`}
+              aria-label={`Apply to ${job.title} at ${job.company}`}
             >
               Apply
               <ExternalLink className="size-3.5 shrink-0" aria-hidden />
-            </a>
+            </button>
           </div>
           <button
             type="button"
@@ -666,6 +717,9 @@ export function JobsList() {
   const searchParamsKey = searchParams.toString();
 
   const { query, experience, jobType } = useJobFiltersStore();
+  const { setPendingApplyJob, pendingApplyJob, createApp } = useApplicationsStore();
+  const [applyConfirming, setApplyConfirming] = useState(false);
+
   const [viewMode, setViewMode] = useState<ViewMode>("card");
   const [debouncedQuery, setDebouncedQuery] = useState(query);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -674,6 +728,34 @@ export function JobsList() {
   const prevSelectedRef = useRef<string | null>(null);
   const detailPhaseRef = useRef<DetailPhase>("closed");
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleApplyClick(job: Job) {
+    if (job.applyUrl && job.applyUrl !== "#") {
+      window.open(job.applyUrl, "_blank", "noopener,noreferrer");
+    }
+    setPendingApplyJob({
+      jobId: Number(job.id),
+      jobTitle: job.title,
+      company: job.company,
+      applyUrl: job.applyUrl,
+    });
+  }
+
+  async function handleConfirmApply() {
+    if (!pendingApplyJob) return;
+    setApplyConfirming(true);
+    try {
+      await createApp(pendingApplyJob.jobId);
+      notify.success(`Marked as applied — ${pendingApplyJob.jobTitle}`, {
+        title: "Application tracked",
+      });
+      setPendingApplyJob(null);
+    } catch (e) {
+      notify.error(e instanceof Error ? e.message : "Could not save application.");
+    } finally {
+      setApplyConfirming(false);
+    }
+  }
 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [total, setTotal] = useState(0);
@@ -995,6 +1077,7 @@ export function JobsList() {
             viewMode={viewMode}
             selected={selectedId === job.id}
             onSelect={() => setSelectedId(job.id)}
+            onApplyClick={handleApplyClick}
           />
         ))}
 
@@ -1048,6 +1131,16 @@ export function JobsList() {
             </div>
           </div>
         </div>
+      ) : null}
+
+      {pendingApplyJob ? (
+        <ApplyConfirmBanner
+          jobTitle={pendingApplyJob.jobTitle}
+          company={pendingApplyJob.company}
+          onConfirm={handleConfirmApply}
+          onDismiss={() => setPendingApplyJob(null)}
+          confirming={applyConfirming}
+        />
       ) : null}
 
       {!loading && total > 0 ? (

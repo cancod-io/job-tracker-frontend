@@ -16,8 +16,13 @@ import {
   networkErrorMessage,
   resolveLoginError,
 } from "@/lib/auth-errors";
-import { clearStoredTokens, setStoredTokens, TOKEN_STORAGE_KEY } from "@/lib/auth-token";
-import { fetchWithTimeout } from "@/lib/http";
+import {
+  clearStoredTokens,
+  SESSION_EXPIRED_EVENT,
+  setStoredTokens,
+  TOKEN_STORAGE_KEY,
+} from "@/lib/auth-token";
+import { assertOkResponse, fetchWithTimeout } from "@/lib/http";
 import type { AuthUser, RegisterResult, TokenResponse } from "@/types/auth";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
@@ -45,9 +50,7 @@ async function fetchMe(token: string): Promise<AuthUser> {
     headers: { Authorization: `Bearer ${token}` },
     credentials: "omit",
   });
-  if (!res.ok) {
-    throw new Error("Unauthorized");
-  }
+  await assertOkResponse(res, "Could not load your profile.");
   return (await res.json()) as AuthUser;
 }
 
@@ -90,6 +93,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refreshSession();
   }, [refreshSession]);
 
+  useEffect(() => {
+    const onSessionExpired = () => logout();
+    window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onSessionExpired);
+  }, [logout]);
+
   const login = useCallback(async (email: string, password: string) => {
     let res: Response;
     try {
@@ -98,7 +107,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      console.log("res", res);
     } catch (e) {
       const networkMsg = networkErrorMessage(e);
       if (networkMsg) {

@@ -2,6 +2,14 @@
 export const TOKEN_STORAGE_KEY = "sjt_user_access_token";
 export const REFRESH_TOKEN_STORAGE_KEY = "sjt_user_refresh_token";
 
+/** Dispatched when an API returns 401 so AuthProvider can clear client auth state. */
+export const SESSION_EXPIRED_EVENT = "sjt:session-expired";
+
+export function signalSessionExpired(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
+}
+
 /** Read the stored access token in the browser; null on the server or when signed out. */
 export function getStoredAccessToken(): string | null {
   if (typeof window === "undefined") return null;

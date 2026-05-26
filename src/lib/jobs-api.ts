@@ -1,5 +1,5 @@
 import { authRequestHeaders } from "@/lib/auth-token";
-import { fetchWithTimeout } from "@/lib/http";
+import { assertOkResponse, fetchWithTimeout } from "@/lib/http";
 import type { ApiJobListResponse, FetchJobsListParams } from "@/types/api-jobs";
 
 function appendJobsQueryParams(search: URLSearchParams, params: FetchJobsListParams): void {
@@ -32,10 +32,7 @@ export async function fetchJobsList(params: FetchJobsListParams = {}): Promise<A
     credentials: "omit",
   });
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text || `Request failed (${res.status})`);
-  }
+  await assertOkResponse(res, "Could not load jobs.");
 
   return (await res.json()) as ApiJobListResponse;
 }

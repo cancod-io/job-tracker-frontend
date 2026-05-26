@@ -80,7 +80,7 @@ function UserRegisterFormInner() {
         </div>
         <p className="text-center text-sm text-muted-foreground">
           <Link
-            href={"/zxc-3"}
+            href={LOGIN_PATH}
             className="font-semibold text-primary underline-offset-4 hover:underline"
           >
             Back to sign in
