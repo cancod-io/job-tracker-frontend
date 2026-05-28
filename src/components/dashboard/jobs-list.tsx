@@ -1,16 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { notify } from "@/lib/notify";
-import { openApplyUrlInBackground } from "@/lib/open-apply-url";
-import { fetchJobsList } from "@/lib/jobs-api";
-import { mapApiJobListItemToJob } from "@/lib/job-mapper";
 import { readJobsViewMode, writeJobsViewMode } from "@/lib/jobs-view-mode";
 import { cn } from "@/lib/utils";
 import { useJobFiltersStore } from "@/store/job-filters";
 import { useApplicationsStore } from "@/store/applications-store";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useJobsListQuery } from "@/hooks/use-jobs-list-query";
+import { useJobsListUrlState } from "@/hooks/use-jobs-list-url-state";
+import { useSlideOverPanel } from "@/hooks/use-slide-over-panel";
+import { useApplyFlow } from "@/hooks/use-apply-flow";
+import { Skeleton } from "@/components/ui/skeleton";
 import { JobCard } from "@/components/jobs/job-card";
+import { JobCardSkeleton } from "@/components/jobs/job-card-skeleton";
 import { JobDetailPanel } from "@/components/jobs/job-detail-panel";
 import { JobsPagination } from "@/components/jobs/jobs-pagination";
 import { JobsToolbar } from "@/components/jobs/jobs-toolbar";
@@ -18,11 +22,6 @@ import { ApplyConfirmBanner } from "@/components/jobs/apply-confirm-banner";
 import {
   buildJobsListHref,
   buildPaginationItems,
-  parseAtsStatusFromSearchParams,
-  parsePageFromSearchParams,
-  parsePerPageFromSearchParams,
-  parseSortFromSearchParams,
-  type DetailPhase,
   type JobsListAtsStatusFilter,
   type JobsViewMode,
   type PageSizeOption,
@@ -31,7 +30,9 @@ import {
 } from "@/components/jobs/types";
 import type { ExperienceLevel, Job, JobType } from "@/types/job";
 
-// ─── Client-side filter helper ─────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
+const SEARCH_DEBOUNCE_MS = 400;
 
 function normalizeExperienceBucket(level: string): ExperienceLevel | null {
   const x = level.toLowerCase();
@@ -60,8 +61,6 @@ function matchesClientFilters(
   return matchesExperience && matchesType;
 }
 
-// ─── Scroll helper ─────────────────────────────────────────────────────────
-
 function scrollToPageTop(): void {
   if (typeof window === "undefined") return;
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -71,70 +70,43 @@ function scrollToPageTop(): void {
 // ─── Component ─────────────────────────────────────────────────────────────
 
 /**
- * Primary job-listings component.
- *
- * Responsibilities:
- * - Reads filter/sort/pagination state from URL search params.
- * - Fetches jobs from the API whenever params change.
- * - Applies client-side experience/type filters via `useJobFiltersStore`.
- * - Manages the slide-over detail panel with enter/leave animations.
- * - Handles the "Apply + confirm" flow via `useApplicationsStore`.
+ * Primary job-listings component. Composes:
+ *  - `useJobsListUrlState` for URL-derived state (page, sort, perPage, atsStatus)
+ *  - `useDebouncedValue` for search input
+ *  - `useSlideOverPanel` for the detail panel state machine
+ *  - `useApplyFlow` for the Apply → confirm banner workflow
  */
 export function JobsList() {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const searchParamsKey = searchParams.toString();
 
-  // ── Store slices ──────────────────────────────────────────────────────────
-  const { experience, jobType, query } = useJobFiltersStore();
-  const {
-    addPendingApplyJob,
-    removePendingApplyJob,
-    pendingApplyJobs,
-    createApp,
-    applications,
-    fetchApplications,
-  } = useApplicationsStore();
+  // ── URL state ─────────────────────────────────────────────────────────────
+  const { page, sort, perPage, atsStatus, searchParamsKey } = useJobsListUrlState();
 
-  // ── URL-derived state ─────────────────────────────────────────────────────
-  const urlPage = useMemo(
-    () => parsePageFromSearchParams(new URLSearchParams(searchParamsKey)),
-    [searchParamsKey],
-  );
-  const urlSort = useMemo(
-    () => parseSortFromSearchParams(new URLSearchParams(searchParamsKey)),
-    [searchParamsKey],
-  );
-  const urlPerPage = useMemo(
-    () => parsePerPageFromSearchParams(new URLSearchParams(searchParamsKey)),
-    [searchParamsKey],
-  );
-  const urlAtsStatus = useMemo(
-    () => parseAtsStatusFromSearchParams(new URLSearchParams(searchParamsKey)),
-    [searchParamsKey],
-  );
+  // ── Client filter store (selector-sliced to avoid extra re-renders) ───────
+  const experience = useJobFiltersStore((s) => s.experience);
+  const jobType = useJobFiltersStore((s) => s.jobType);
+  const query = useJobFiltersStore((s) => s.query);
+
+  // ── Applications (only the slices this component reads) ───────────────────
+  const applications = useApplicationsStore((s) => s.applications);
+  const fetchApplications = useApplicationsStore((s) => s.fetchApplications);
 
   // ── Jobs list state ───────────────────────────────────────────────────────
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const fetchGeneration = useRef(0);
 
   // ── View mode (persisted to localStorage) ─────────────────────────────────
   const [viewMode, setViewModeState] = useState<JobsViewMode>("card");
-  useEffect(() => { setViewModeState(readJobsViewMode()); }, []);
+  useEffect(() => {
+    setViewModeState(readJobsViewMode());
+  }, []);
   const setViewMode = useCallback((mode: JobsViewMode) => {
     setViewModeState(mode);
     writeJobsViewMode(mode);
   }, []);
 
   // ── Search debounce ───────────────────────────────────────────────────────
-  const [debouncedQuery, setDebouncedQuery] = useState(query);
-  useEffect(() => {
-    const t = window.setTimeout(() => setDebouncedQuery(query), 400);
-    return () => window.clearTimeout(t);
-  }, [query]);
+  const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
 
   // ── Reset to page 1 when filters/query change ────────────────────────────
   const prevDebouncedQueryRef = useRef(debouncedQuery);
@@ -149,47 +121,39 @@ export function JobsList() {
     prevJobTypeRef.current = jobType;
 
     if (!queryChanged && !experienceChanged && !jobTypeChanged) return;
-    if (urlPage <= 1) return;
+    if (page <= 1) return;
 
-    const sp = new URLSearchParams(searchParams.toString());
+    const sp = new URLSearchParams(searchParamsKey);
     router.replace(buildJobsListHref(pathname, sp, { page: 1 }), { scroll: false });
-  }, [debouncedQuery, experience, jobType, urlPage, pathname, router, searchParams]);
+  }, [debouncedQuery, experience, jobType, page, pathname, router, searchParamsKey]);
 
   // ── Fetch jobs ────────────────────────────────────────────────────────────
+  const jobsQuery = useJobsListQuery({
+    page,
+    perPage,
+    sort,
+    atsStatus,
+    query: debouncedQuery,
+  });
+  const total = jobsQuery.data?.total ?? 0;
+  const loading = jobsQuery.isPending;
+  const isRefreshing = jobsQuery.isFetching && !jobsQuery.isPending;
+  const showCardSkeletons = loading || isRefreshing;
+
   useEffect(() => {
-    const gen = ++fetchGeneration.current;
-    const offset = (urlPage - 1) * urlPerPage;
+    if (!jobsQuery.error) return;
+    notify.error(jobsQuery.error instanceof Error ? jobsQuery.error.message : "Could not load jobs.");
+  }, [jobsQuery.error]);
 
-    setLoading(true);
-    setSelectedId(null);
-
-    void (async () => {
-      try {
-        const data = await fetchJobsList({
-          limit: urlPerPage,
-          offset,
-          sort: urlSort,
-          ats_status: urlAtsStatus === "all" ? undefined : urlAtsStatus,
-          include_inactive: false,
-          include_duplicates: false,
-          q: debouncedQuery.trim() || undefined,
-        });
-        if (gen !== fetchGeneration.current) return;
-        setTotal(data.total);
-        setJobs(data.items.map(mapApiJobListItemToJob));
-      } catch (e) {
-        if (gen !== fetchGeneration.current) return;
-        notify.error(e instanceof Error ? e.message : "Could not load jobs.");
-        setJobs([]);
-        setTotal(0);
-      } finally {
-        if (gen === fetchGeneration.current) setLoading(false);
-      }
-    })();
-  }, [debouncedQuery, urlPage, urlPerPage, urlSort, urlAtsStatus]);
+  useEffect(() => {
+    if (!jobsQuery.data) return;
+    setJobs(jobsQuery.data.jobs);
+  }, [jobsQuery.data]);
 
   // ── Sync applications on mount ────────────────────────────────────────────
-  useEffect(() => { void fetchApplications(); }, [fetchApplications]);
+  useEffect(() => {
+    void fetchApplications();
+  }, [fetchApplications]);
 
   // ── Tracked jobs map ──────────────────────────────────────────────────────
   const trackedJobsMap = useMemo(() => {
@@ -209,142 +173,70 @@ export function JobsList() {
   );
 
   // ── Pagination ────────────────────────────────────────────────────────────
-  const totalPages = Math.max(1, Math.ceil(total / urlPerPage));
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
   const paginationItems = useMemo(
-    () => buildPaginationItems(urlPage, totalPages),
-    [urlPage, totalPages],
+    () => buildPaginationItems(page, totalPages),
+    [page, totalPages],
   );
-  const rangeStart = total === 0 ? 0 : (urlPage - 1) * urlPerPage + 1;
-  const rangeEnd = total === 0 ? 0 : Math.min(urlPage * urlPerPage, total);
+  const rangeStart = total === 0 ? 0 : (page - 1) * perPage + 1;
+  const rangeEnd = total === 0 ? 0 : Math.min(page * perPage, total);
 
   // Auto-correct out-of-range page
   useEffect(() => {
-    if (loading || urlPage <= totalPages) return;
+    if (loading || page <= totalPages) return;
     const sp = new URLSearchParams(searchParamsKey);
     router.replace(buildJobsListHref(pathname, sp, { page: totalPages }), { scroll: false });
-  }, [loading, pathname, router, searchParamsKey, totalPages, urlPage]);
+  }, [loading, pathname, router, searchParamsKey, totalPages, page]);
 
-  function navigateList(patch: { page?: number; sort?: typeof urlSort; perPage?: PageSizeOption; atsStatus?: JobsListAtsStatusFilter }) {
-    scrollToPageTop();
-    const sp = new URLSearchParams(searchParamsKey);
-    router.push(buildJobsListHref(pathname, sp, patch), { scroll: false });
-  }
+  const navigateList = useCallback(
+    (patch: {
+      page?: number;
+      sort?: typeof sort;
+      perPage?: PageSizeOption;
+      atsStatus?: JobsListAtsStatusFilter;
+    }) => {
+      scrollToPageTop();
+      const sp = new URLSearchParams(searchParamsKey);
+      router.push(buildJobsListHref(pathname, sp, patch), { scroll: false });
+    },
+    [pathname, router, searchParamsKey],
+  );
 
   // ── Detail panel ──────────────────────────────────────────────────────────
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detailJob, setDetailJob] = useState<Job | null>(null);
-  const [detailPhase, setDetailPhase] = useState<DetailPhase>("closed");
-  const prevSelectedRef = useRef<string | null>(null);
-  const detailPhaseRef = useRef<DetailPhase>("closed");
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const {
+    selectedId,
+    phase: detailPhase,
+    item: detailJob,
+    open: openDetail,
+    close: closeDetail,
+  } = useSlideOverPanel(visibleJobs, DETAIL_TRANSITION_MS);
 
-  detailPhaseRef.current = detailPhase;
-
-  const closeDetail = useCallback(() => {
-    if (detailPhaseRef.current === "closed" || detailPhaseRef.current === "leaving") return;
-    setDetailPhase("leaving");
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-    closeTimerRef.current = setTimeout(() => {
-      closeTimerRef.current = null;
-      setSelectedId(null);
-      setDetailJob(null);
-      setDetailPhase("closed");
-      prevSelectedRef.current = null;
-    }, DETAIL_TRANSITION_MS);
-  }, []);
-
-  useEffect(() => () => { if (closeTimerRef.current) clearTimeout(closeTimerRef.current); }, []);
-
+  // Clear selection when fetch starts (caller used to reset selectedId in the fetch effect).
   useEffect(() => {
-    if (selectedId === null) {
-      setDetailJob(null);
-      setDetailPhase("closed");
-      prevSelectedRef.current = null;
-      return;
-    }
-    const job = visibleJobs.find((j) => j.id === selectedId);
-    if (!job) { setSelectedId(null); return; }
-
-    setDetailJob(job);
-    const prev = prevSelectedRef.current;
-    if (prev === selectedId) return;
-    prevSelectedRef.current = selectedId;
-
-    if (prev === null) {
-      setDetailPhase("entering");
-      const raf = requestAnimationFrame(() =>
-        requestAnimationFrame(() => setDetailPhase("open")),
-      );
-      return () => cancelAnimationFrame(raf);
-    }
-    setDetailPhase("open");
-  }, [selectedId, visibleJobs]);
-
-  useEffect(() => {
-    if (!detailJob) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") closeDetail();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [detailJob, closeDetail]);
+    closeDetail();
+    // Only on fetch-trigger change — not on every visibleJobs/closeDetail identity change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery, page, perPage, sort, atsStatus]);
 
   // ── Apply flow ────────────────────────────────────────────────────────────
-  const [confirmingApplyIds, setConfirmingApplyIds] = useState<Set<string>>(() => new Set());
-
-  function handleApplyClick(job: Job) {
-    const applyUrl = job.applyUrl?.trim() ?? "";
-    if (applyUrl && applyUrl !== "#") {
-      const opened = openApplyUrlInBackground(applyUrl);
-      if (!opened) {
-        notify.error("Pop-up blocked. Allow pop-ups for this site to open apply links.");
-      }
-    }
-    addPendingApplyJob({
-      jobId: Number(job.id),
-      jobTitle: job.title,
-      company: job.company,
-      applyUrl,
-    });
-  }
-
-  async function handleConfirmApply(id: string) {
-    const pending = pendingApplyJobs.find((p) => p.id === id);
-    if (!pending) return;
-
-    setConfirmingApplyIds((prev) => new Set(prev).add(id));
-    try {
-      await createApp(pending.jobId);
-      notify.success(`Marked as applied — ${pending.jobTitle}`, {
-        title: "Application tracked",
-      });
-      removePendingApplyJob(id);
-    } catch (e) {
-      notify.error(e instanceof Error ? e.message : "Could not save application.");
-    } finally {
-      setConfirmingApplyIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-    }
-  }
+  const {
+    pendingApplyJobs,
+    confirmingIds,
+    handleApplyClick,
+    handleConfirmApply,
+    dismissPending,
+  } = useApplyFlow();
 
   // ─────────────────────────────────────────────────────────────────────────
 
   const sharedPaginationProps = {
     loading,
     total,
-    currentPage: urlPage,
+    currentPage: page,
     totalPages,
     rangeStart,
     rangeEnd,
-    perPage: urlPerPage,
+    perPage,
     paginationItems,
     onNavigate: navigateList,
   };
@@ -356,7 +248,7 @@ export function JobsList() {
         loading={loading}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        urlAtsStatus={urlAtsStatus}
+        urlAtsStatus={atsStatus}
         onAtsStatusChange={(status) => navigateList({ atsStatus: status, page: 1 })}
       />
 
@@ -371,19 +263,23 @@ export function JobsList() {
             : "grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr))]",
         )}
       >
-        {visibleJobs.map((job) => (
-          <JobCard
-            key={job.id}
-            job={job}
-            viewMode={viewMode}
-            selected={selectedId === job.id}
-            trackedInfo={trackedJobsMap.get(Number(job.id))}
-            onSelect={() => setSelectedId(job.id)}
-            onApplyClick={handleApplyClick}
-          />
-        ))}
+        {showCardSkeletons
+          ? Array.from({ length: Math.min(perPage, 8) }).map((_, idx) => (
+              <JobCardSkeleton key={`job-skeleton-${idx}`} viewMode={viewMode} />
+            ))
+          : visibleJobs.map((job) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                viewMode={viewMode}
+                selected={selectedId === job.id}
+                trackedInfo={trackedJobsMap.get(Number(job.id))}
+                onSelect={() => openDetail(job.id)}
+                onApplyClick={handleApplyClick}
+              />
+            ))}
 
-        {!loading && visibleJobs.length === 0 ? (
+        {!showCardSkeletons && visibleJobs.length === 0 ? (
           <div
             className="rounded-2xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground"
             role="status"
@@ -452,15 +348,21 @@ export function JobsList() {
           company={pending.company}
           stackIndex={index}
           onConfirm={() => void handleConfirmApply(pending.id)}
-          onDismiss={() => removePendingApplyJob(pending.id)}
-          confirming={confirmingApplyIds.has(pending.id)}
+          onDismiss={() => dismissPending(pending.id)}
+          confirming={confirmingIds.has(pending.id)}
         />
       ))}
     </section>
   );
 }
 
-/** Suspense fallback rendered while `useSearchParams` resolves. */
+const FIRST_LOAD_SKELETON_COUNT = 8;
+
+/**
+ * Suspense fallback rendered while `useSearchParams` resolves. Uses the same
+ * `JobCardSkeleton` shape as the React-Query loading state so the user never
+ * sees a visual swap between two different skeleton styles.
+ */
 export function JobsListSkeleton() {
   return (
     <section
@@ -469,19 +371,23 @@ export function JobsListSkeleton() {
       aria-busy="true"
       aria-label="Loading job listings"
     >
-      <div className="flex flex-col gap-4 pb-4 sm:flex-row sm:items-start sm:justify-between">
+      {/* Toolbar skeleton — mirrors JobsToolbar layout */}
+      <div className="flex flex-col gap-4 pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
         <div className="min-w-0 flex-1 space-y-2">
-          <div className="h-7 w-40 animate-pulse rounded-lg bg-muted md:h-8 md:w-48" />
-          <div className="h-4 w-64 max-w-full animate-pulse rounded-md bg-muted/80" />
+          <Skeleton className="h-6 w-32 md:h-7 md:w-36" />
+          <Skeleton className="h-3 w-40" />
         </div>
-        <div className="flex flex-wrap items-end justify-end gap-3">
-          <div className="h-10 w-44 animate-pulse rounded-xl bg-muted" />
-          <div className="h-10 w-[11rem] animate-pulse rounded-full bg-muted/80" />
+        <div className="flex flex-wrap items-end justify-end gap-3 sm:shrink-0">
+          <Skeleton className="h-10 w-full rounded-xl sm:w-64" />
+          <Skeleton className="h-10 w-44 rounded-xl" />
+          <Skeleton className="h-10 w-[11rem] rounded-full" />
         </div>
       </div>
+
+      {/* Card grid skeleton — same shape as a real card */}
       <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr))]">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-64 animate-pulse rounded-2xl border border-border/60 bg-muted/30" />
+        {Array.from({ length: FIRST_LOAD_SKELETON_COUNT }).map((_, i) => (
+          <JobCardSkeleton key={`first-load-skel-${i}`} viewMode="card" />
         ))}
       </div>
     </section>

@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutGrid, List, Search, X } from "lucide-react";
+import { LayoutGrid, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SearchInput } from "@/components/ui/search-input";
 import { jobAtsStatusLabel } from "@/lib/application-status-badge";
@@ -45,7 +45,7 @@ export function JobsToolbar({
           aria-live="polite"
           aria-atomic="true"
         >
-          {loading ? "Loading…" : total > 0 ? `${total.toLocaleString()} jobs found` : ""}
+          {!loading && total > 0 ? `${total.toLocaleString()} jobs found` : ""}
         </p>
       </div>
 

@@ -1,4 +1,4 @@
-import { useNotificationStore, type NotificationVariant } from "@/stores/notification-store";
+import { useNotificationStore, type NotificationVariant } from "@/store/notification-store";
 
 const DEFAULT_DURATION_MS = 5_500;
 const ERROR_DURATION_MS = 7_000;

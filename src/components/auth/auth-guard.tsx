@@ -2,7 +2,6 @@
 
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
 import { LOGIN_PATH } from "@/config/auth-routes";
 import { useAuth } from "@/providers/auth-provider";
 
@@ -20,18 +19,8 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     router.replace(loginUrl);
   }, [status, router, pathname]);
 
-  if (status === "loading") {
-    return (
-      <div
-        className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-muted-foreground"
-        aria-busy="true"
-      >
-        <Loader2 className="size-8 animate-spin motion-reduce:animate-none" aria-hidden />
-        <p className="text-sm">Loading…</p>
-      </div>
-    );
-  }
-
+  // While the session is being checked (or before a redirect), render nothing
+  // so the page-level Suspense fallback (skeletons) takes over the loading UI.
   if (status !== "authenticated") {
     return null;
   }
