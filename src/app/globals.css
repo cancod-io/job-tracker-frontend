@@ -130,7 +130,7 @@
   }
 
   body {
-    @apply bg-background font-body text-base font-normal leading-relaxed text-foreground antialiased;
+    @apply bg-background font-sans text-base font-normal leading-relaxed text-foreground antialiased;
   }
 
   h1 {

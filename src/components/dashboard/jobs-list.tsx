@@ -61,6 +61,29 @@ function matchesClientFilters(
   return matchesExperience && matchesType;
 }
 
+function renderEmptyStateMessage(args: {
+  query: string;
+  hasClientFilters: boolean;
+  total: number;
+  pageJobs: number;
+}): string {
+  const trimmed = args.query.trim();
+  // Search returned zero hits from the server.
+  if (trimmed && args.total === 0) {
+    return `No jobs match “${trimmed}”. Try a different keyword or clear the search.`;
+  }
+  // The server page had results but client-side filters (experience / job type) hid them all.
+  if (args.pageJobs > 0 && args.hasClientFilters) {
+    return "All results on this page were hidden by your experience / job-type filters. Adjust the filters or try another page.";
+  }
+  // No active query, no client filters, but server returned nothing at all.
+  if (args.total === 0) {
+    return "No job listings are available yet. Check back soon.";
+  }
+  // Out-of-range page (auto-correct effect will navigate momentarily).
+  return "No jobs on this page. Loading the next one…";
+}
+
 function scrollToPageTop(): void {
   if (typeof window === "undefined") return;
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -91,9 +114,6 @@ export function JobsList() {
   // ── Applications (only the slices this component reads) ───────────────────
   const applications = useApplicationsStore((s) => s.applications);
   const fetchApplications = useApplicationsStore((s) => s.fetchApplications);
-
-  // ── Jobs list state ───────────────────────────────────────────────────────
-  const [jobs, setJobs] = useState<Job[]>([]);
 
   // ── View mode (persisted to localStorage) ─────────────────────────────────
   const [viewMode, setViewModeState] = useState<JobsViewMode>("card");
@@ -139,16 +159,12 @@ export function JobsList() {
   const loading = jobsQuery.isPending;
   const isRefreshing = jobsQuery.isFetching && !jobsQuery.isPending;
   const showCardSkeletons = loading || isRefreshing;
+  const jobs = useMemo(() => jobsQuery.data?.jobs ?? [], [jobsQuery.data]);
 
   useEffect(() => {
     if (!jobsQuery.error) return;
     notify.error(jobsQuery.error instanceof Error ? jobsQuery.error.message : "Could not load jobs.");
   }, [jobsQuery.error]);
-
-  useEffect(() => {
-    if (!jobsQuery.data) return;
-    setJobs(jobsQuery.data.jobs);
-  }, [jobsQuery.data]);
 
   // ── Sync applications on mount ────────────────────────────────────────────
   useEffect(() => {
@@ -211,18 +227,22 @@ export function JobsList() {
     close: closeDetail,
   } = useSlideOverPanel(visibleJobs, DETAIL_TRANSITION_MS);
 
-  // Clear selection when fetch starts (caller used to reset selectedId in the fetch effect).
+  // Close the slide-over whenever the visible result set may change. Includes
+  // both server-side fetch triggers and the local experience / job-type filters
+  // (otherwise a tracked-out selection could keep a stale detail panel open).
   useEffect(() => {
     closeDetail();
-    // Only on fetch-trigger change — not on every visibleJobs/closeDetail identity change.
+    // Identity of `closeDetail` & `visibleJobs` would re-fire this on every render;
+    // we only want to fire on the inputs that change the result set.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedQuery, page, perPage, sort, atsStatus]);
+  }, [debouncedQuery, page, perPage, sort, atsStatus, experience, jobType]);
 
   // ── Apply flow ────────────────────────────────────────────────────────────
   const {
     pendingApplyJobs,
     confirmingIds,
     handleApplyClick,
+    handleApplyAndTrackDirectly,
     handleConfirmApply,
     dismissPending,
   } = useApplyFlow();
@@ -260,8 +280,12 @@ export function JobsList() {
           "min-w-0",
           viewMode === "list"
             ? "space-y-3"
-            : "grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr))]",
+            : // `auto-fill` (not `auto-fit`) keeps empty tracks so a lone result
+              // doesn't stretch to fill the row. Max column width is capped
+              // (22rem) so cards stay a consistent size at any result count.
+              "grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,19rem),22rem))]",
         )}
+        aria-busy={showCardSkeletons}
       >
         {showCardSkeletons
           ? Array.from({ length: Math.min(perPage, 8) }).map((_, idx) => (
@@ -281,15 +305,16 @@ export function JobsList() {
 
         {!showCardSkeletons && visibleJobs.length === 0 ? (
           <div
-            className="rounded-2xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground"
+            className="col-span-full rounded-2xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground"
             role="status"
             aria-live="polite"
           >
-            {jobs.length > 0
-              ? "No jobs match your current filters. Adjust search criteria to discover more roles."
-              : total === 0
-                ? "No job listings are available from the server yet."
-                : "No jobs match your current filters. Try another page or broadening your search."}
+            {renderEmptyStateMessage({
+              query: debouncedQuery,
+              hasClientFilters: experience !== "All" || jobType !== "All",
+              total,
+              pageJobs: jobs.length,
+            })}
           </div>
         ) : null}
       </div>
@@ -334,7 +359,12 @@ export function JobsList() {
                   "translate-y-full opacity-0 motion-reduce:translate-y-0 motion-reduce:opacity-0 md:translate-y-0 md:translate-x-full",
               )}
             >
-              <JobDetailPanel job={detailJob} onClose={closeDetail} />
+              <JobDetailPanel
+                job={detailJob}
+                onClose={closeDetail}
+                trackedInfo={trackedJobsMap.get(Number(detailJob.id))}
+                onApplyClick={(job) => void handleApplyAndTrackDirectly(job)}
+              />
             </div>
           </div>
         </div>
@@ -385,7 +415,7 @@ export function JobsListSkeleton() {
       </div>
 
       {/* Card grid skeleton — same shape as a real card */}
-      <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr))]">
+      <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,19rem),22rem))]">
         {Array.from({ length: FIRST_LOAD_SKELETON_COUNT }).map((_, i) => (
           <JobCardSkeleton key={`first-load-skel-${i}`} viewMode="card" />
         ))}

@@ -31,7 +31,7 @@ export const TRACKED_STATUS_BADGE: Record<
   },
   interviewing: {
     label: "Interviewing",
-    className: "border-teal-500/40 bg-teal-500/10 text-teal-700 dark:text-teal-300",
+    className: "border-teal-400/40 bg-teal-400/10 text-teal-700 dark:text-teal-300",
   },
   offer: {
     label: "Offer",

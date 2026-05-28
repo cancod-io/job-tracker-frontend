@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getInternalApiBase } from "@/lib/api";
+import { BACKEND_OFFLINE_MESSAGE, BACKEND_TIMEOUT_MESSAGE } from "@/lib/backend-errors";
 import { CORS_HEADERS, optionsResponse } from "@/lib/cors";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -34,10 +35,13 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     });
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {
-      return NextResponse.json({ detail: "Timed out." }, { status: 504, headers: CORS_HEADERS });
+      return NextResponse.json(
+        { detail: BACKEND_TIMEOUT_MESSAGE },
+        { status: 504, headers: CORS_HEADERS },
+      );
     }
     return NextResponse.json(
-      { detail: "Could not reach the applications API." },
+      { detail: BACKEND_OFFLINE_MESSAGE },
       { status: 502, headers: CORS_HEADERS },
     );
   } finally {
@@ -75,10 +79,13 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     });
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {
-      return NextResponse.json({ detail: "Timed out." }, { status: 504, headers: CORS_HEADERS });
+      return NextResponse.json(
+        { detail: BACKEND_TIMEOUT_MESSAGE },
+        { status: 504, headers: CORS_HEADERS },
+      );
     }
     return NextResponse.json(
-      { detail: "Could not reach the applications API." },
+      { detail: BACKEND_OFFLINE_MESSAGE },
       { status: 502, headers: CORS_HEADERS },
     );
   } finally {
@@ -109,10 +116,13 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
     });
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {
-      return NextResponse.json({ detail: "Timed out." }, { status: 504, headers: CORS_HEADERS });
+      return NextResponse.json(
+        { detail: BACKEND_TIMEOUT_MESSAGE },
+        { status: 504, headers: CORS_HEADERS },
+      );
     }
     return NextResponse.json(
-      { detail: "Could not reach the applications API." },
+      { detail: BACKEND_OFFLINE_MESSAGE },
       { status: 502, headers: CORS_HEADERS },
     );
   } finally {

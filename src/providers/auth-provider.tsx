@@ -148,10 +148,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }),
         });
       } catch (e) {
-        if (e instanceof Error && e.name === "AbortError") {
-          throw new Error(
-            "Could not reach the API (timed out). The Next.js server must reach your backend — set API_INTERNAL_URL in .env.local to the API address used from this machine (e.g. http://127.0.0.1:8000).",
-          );
+        const networkMsg = networkErrorMessage(e);
+        if (networkMsg) {
+          throw new Error(networkMsg);
         }
         throw e;
       }
