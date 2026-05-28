@@ -24,7 +24,7 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   return (
-    <header className={cn("space-y-4 border-b border-border/70 pb-6 md:pb-8", className)}>
+    <header className={cn("space-y-4 pb-6 md:pb-8", className)}>
       <nav aria-label="Breadcrumb" className="overflow-x-auto">
         <ol className="flex flex-wrap items-center gap-x-1 gap-y-1 text-sm">
           {breadcrumbs.map((crumb, i) => {
