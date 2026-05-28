@@ -5,6 +5,7 @@ import {
   fetchApplicationsList,
   updateApplication,
 } from "@/lib/applications-api";
+import { randomId } from "@/lib/random-id";
 import type { ApiApplication, ApiApplicationStatus } from "@/types/application";
 
 export type PendingApplyJob = {
@@ -41,15 +42,6 @@ function decodeApplication(a: ApiApplication): ApiApplication {
     // plain text notes — leave as-is
   }
   return { ...a, status: normalizeStatus(a.status) };
-}
-
-/** Unique id for a pending-apply banner (works when `crypto.randomUUID` is missing). */
-function newPendingApplyId(): string {
-  const c = globalThis.crypto;
-  if (c && typeof c.randomUUID === "function") {
-    return c.randomUUID();
-  }
-  return `pending-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
 /* ─── Store ──────────────────────────────────────────────────────────────── */
@@ -168,7 +160,7 @@ export const useApplicationsStore = create<ApplicationsState & ApplicationsActio
     set((s) => ({
       pendingApplyJobs: [
         ...s.pendingApplyJobs,
-        { ...job, id: newPendingApplyId() },
+        { ...job, id: randomId("pending") },
       ],
     })),
 

@@ -4,6 +4,7 @@ import { Inter, Open_Sans } from "next/font/google";
 import { themeInlineScript } from "@/lib/theme";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/providers/auth-provider";
+import { AppQueryProvider } from "@/providers/query-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 import "./globals.css";
 
@@ -39,16 +40,18 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           Skip to main content
         </a>
         <ThemeProvider>
-          <Toaster />
-          <div className="relative min-h-screen">
-            <div
-              className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-primary/[0.07] to-transparent md:h-64"
-              aria-hidden
-            />
-            <div className="relative flex min-h-screen flex-col">
-              <AuthProvider>{children}</AuthProvider>
+          <AppQueryProvider>
+            <Toaster />
+            <div className="relative min-h-screen">
+              <div
+                className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-primary/[0.07] to-transparent md:h-64"
+                aria-hidden
+              />
+              <div className="relative flex min-h-screen flex-col">
+                <AuthProvider>{children}</AuthProvider>
+              </div>
             </div>
-          </div>
+          </AppQueryProvider>
         </ThemeProvider>
       </body>
     </html>

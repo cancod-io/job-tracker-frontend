@@ -36,16 +36,14 @@ const DEFAULT_SORT: ApplicationSortKey = "date_applied_desc";
  * - Shows loading skeleton and empty state.
  */
 export function KanbanBoard() {
-  const {
-    applications,
-    loading,
-    error,
-    fetchApplications,
-    createApp,
-    updateStatus,
-    updateNotes,
-    removeApplication,
-  } = useApplicationsStore();
+  const applications = useApplicationsStore((s) => s.applications);
+  const loading = useApplicationsStore((s) => s.loading);
+  const error = useApplicationsStore((s) => s.error);
+  const fetchApplications = useApplicationsStore((s) => s.fetchApplications);
+  const createApp = useApplicationsStore((s) => s.createApp);
+  const updateStatus = useApplicationsStore((s) => s.updateStatus);
+  const updateNotes = useApplicationsStore((s) => s.updateNotes);
+  const removeApplication = useApplicationsStore((s) => s.removeApplication);
 
   // ── Local UI state ──────────────────────────────────────────────────────
   // Global filters (toolbar) — apply to every column unless a column overrides them.

@@ -5,7 +5,7 @@ import {
   useNotificationStore,
   type NotificationItem,
   type NotificationVariant,
-} from "@/stores/notification-store";
+} from "@/store/notification-store";
 import { cn } from "@/lib/utils";
 
 const variantIcons: Record<NotificationVariant, typeof AlertCircle> = {
