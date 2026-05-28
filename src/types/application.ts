@@ -1,10 +1,10 @@
-export type ApiApplicationStatus = "new" | "applied" | "interviewing" | "rejected";
+export type ApiApplicationStatus = "applied" | "interviewing" | "offer" | "failed";
 
 export const API_APPLICATION_STATUSES = [
-  "new",
   "applied",
   "interviewing",
-  "rejected",
+  "offer",
+  "failed",
 ] as const satisfies readonly ApiApplicationStatus[];
 
 export type ApiApplicationJob = {

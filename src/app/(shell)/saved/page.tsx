@@ -11,7 +11,7 @@ export default function SavedJobsPage() {
         breadcrumbs={[{ label: "Jobs", href: "/jobs" }, { label: "Saved jobs" }]}
         actions={
           <Link
-            href="/#jobs"
+            href="/jobs"
             className="hover:bg-primary/92 inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-colors"
           >
             Back to feed
