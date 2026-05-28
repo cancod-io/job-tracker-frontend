@@ -3,6 +3,7 @@
  * and sort logic for tracked job applications.
  */
 
+import { copyTextToClipboard } from "@/lib/copy-to-clipboard";
 import { notify } from "@/lib/notify";
 import { formatDate } from "@/lib/date-utils";
 import type { ApiApplication } from "@/types/application";
@@ -47,10 +48,16 @@ export function copyAppToClipboard(app: ApiApplication): void {
     notes ? `Notes: ${notes}` : "",
   ].filter(Boolean);
 
-  void navigator.clipboard.writeText(lines.join("\n")).then(
-    () => notify.success("Copied to clipboard"),
-    () => notify.error("Failed to copy"),
-  );
+  const text = lines.join("\n");
+
+  void (async () => {
+    try {
+      await copyTextToClipboard(text);
+      notify.success("Copied to clipboard");
+    } catch {
+      notify.error("Failed to copy");
+    }
+  })();
 }
 
 // ─── Date filtering ─────────────────────────────────────────────────────────

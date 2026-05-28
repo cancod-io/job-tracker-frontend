@@ -17,6 +17,7 @@ import { freshnessColor, relativeDate } from "@/lib/date-utils";
 import { companyInitials } from "@/lib/company-utils";
 import { companyName, jobTitle } from "@/lib/application-utils";
 import { useClickOutside } from "@/hooks/use-click-outside";
+import { copyTextToClipboard } from "@/lib/copy-to-clipboard";
 import { notify } from "@/lib/notify";
 import type { ApiApplication } from "@/types/application";
 
@@ -25,10 +26,14 @@ function copyLink(applyUrl: string) {
     notify.error("No apply link available for this job.");
     return;
   }
-  void navigator.clipboard.writeText(applyUrl).then(
-    () => notify.success("Link copied to clipboard"),
-    () => notify.error("Failed to copy link"),
-  );
+  void (async () => {
+    try {
+      await copyTextToClipboard(applyUrl);
+      notify.success("Link copied to clipboard");
+    } catch {
+      notify.error("Failed to copy link");
+    }
+  })();
 }
 
 type ApplicationCardProps = {
@@ -160,7 +165,7 @@ export function ApplicationCard({
                 Copy link
               </button>
 
-              <button
+              {/* <button
                 type="button"
                 role="menuitem"
                 onClick={() => { onCardClick(app); setMenuOpen(false); }}
@@ -168,7 +173,7 @@ export function ApplicationCard({
               >
                 <ExternalLink className="size-3.5 shrink-0 opacity-70" aria-hidden />
                 View job posting
-              </button>
+              </button> */}
 
               <div className="my-1 border-t border-border/60" role="separator" />
 

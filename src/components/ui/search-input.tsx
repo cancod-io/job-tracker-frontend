@@ -37,7 +37,12 @@ export function SearchInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={cn("form-control h-10 w-full pl-9 text-sm", value && "pr-9")}
+        className={cn(
+          "form-control h-10 w-full pl-9 text-sm",
+          value && "pr-9",
+          /* Hide native clear control — we render a custom clear button */
+          "[&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden [&::-ms-clear]:hidden",
+        )}
         aria-label={ariaLabel}
       />
       {value ? (

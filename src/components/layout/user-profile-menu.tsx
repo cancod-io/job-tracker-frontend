@@ -19,7 +19,7 @@ function initials(name: string, email: string): string {
 }
 
 const menuItemClass =
-  "flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-muted";
+  "flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-foreground transition-colors";
 
 export function UserProfileMenu() {
   const { status, user, logout } = useAuth();

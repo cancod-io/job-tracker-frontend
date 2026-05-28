@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { jobAtsStatusBadgeClass, jobAtsStatusLabel } from "@/lib/application-status-badge";
+import { copyTextToClipboard } from "@/lib/copy-to-clipboard";
 import { notify } from "@/lib/notify";
 import type { Job } from "@/types/job";
 
@@ -20,10 +21,14 @@ function copyJobLink(job: Job): void {
     notify.error("No apply link available for this job");
     return;
   }
-  void navigator.clipboard.writeText(url).then(
-    () => notify.success("Link copied to clipboard"),
-    () => notify.error("Failed to copy link"),
-  );
+  void (async () => {
+    try {
+      await copyTextToClipboard(url);
+      notify.success("Link copied to clipboard");
+    } catch {
+      notify.error("Failed to copy link");
+    }
+  })();
 }
 
 function copyJobId(job: Job): void {
@@ -32,10 +37,14 @@ function copyJobId(job: Job): void {
     notify.error("No job ID available");
     return;
   }
-  void navigator.clipboard.writeText(id).then(
-    () => notify.success("Job ID copied to clipboard"),
-    () => notify.error("Failed to copy job ID"),
-  );
+  void (async () => {
+    try {
+      await copyTextToClipboard(id);
+      notify.success("Job ID copied to clipboard");
+    } catch {
+      notify.error("Failed to copy job ID");
+    }
+  })();
 }
 
 function externalHref(url: string): string {
