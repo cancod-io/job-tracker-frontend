@@ -30,7 +30,7 @@ const BLOCKING_JOB_ATS_STATUSES: readonly JobAtsStatus[] = [
   "applied",
   "interviewing",
   "offer",
-  "rejected",
+  "failed",
 ];
 
 function isApplyActionBlocked(job: Job, trackedInfo?: TrackedInfo): boolean {

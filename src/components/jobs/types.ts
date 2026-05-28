@@ -77,9 +77,9 @@ export function buildPaginationItems(current: number, totalPages: number): Pagin
 
 // ─── URL helpers ───────────────────────────────────────────────────────────
 
-import { API_JOB_ATS_STATUSES, type ApiJobAtsStatus } from "@/types/api-jobs";
+import { API_JOB_ATS_STATUSES } from "@/types/api-jobs";
 
-export type JobsListAtsStatusFilter = "all" | ApiJobAtsStatus;
+export type JobsListAtsStatusFilter = "all" | (typeof API_JOB_ATS_STATUSES)[number];
 
 export function parsePageFromSearchParams(sp: URLSearchParams): number {
   const raw = sp.get(URL_PAGE_KEY);
@@ -105,7 +105,7 @@ export function parseAtsStatusFromSearchParams(sp: URLSearchParams): JobsListAts
   const raw = sp.get(URL_ATS_STATUS_KEY);
   if (!raw) return "all";
   return (API_JOB_ATS_STATUSES as readonly string[]).includes(raw)
-    ? (raw as ApiJobAtsStatus)
+    ? (raw as JobsListAtsStatusFilter)
     : "all";
 }
 

@@ -2,15 +2,8 @@ export type ExperienceLevel = "Junior" | "Mid-Level" | "Senior";
 export type JobType = "Remote" | "Full-Time" | "Contract";
 export type ApplicationStatus = "Not Applied" | "Applied" | "Pending" | "Interview Scheduled";
 
-/** Pipeline status from the jobs API (`job_ats_status`). */
-export type JobAtsStatus =
-  | "new"
-  | "shortlisted"
-  | "applied"
-  | "interviewing"
-  | "offer"
-  | "rejected"
-  | "archived";
+/** Pipeline status from the jobs API (`job_ats_status`), normalized for the UI. */
+export type JobAtsStatus = "new" | "applied" | "interviewing" | "offer" | "failed";
 
 export type Job = {
   id: string;
