@@ -1,5 +1,5 @@
 import { formatRelativeTime } from "@/lib/format-relative-time";
-import type { ApiJobListItem } from "@/types/api-jobs";
+import { normalizeAtsStatusFromApi, type ApiJobListItem } from "@/types/api-jobs";
 import type { Job } from "@/types/job";
 
 function buildJobTypeLabel(item: ApiJobListItem): string {
@@ -91,7 +91,7 @@ export function mapApiJobListItemToJob(item: ApiJobListItem): Job {
     employmentLabel: raw || "—",
     isRemote: Boolean(item.is_remote),
     applyUrl: item.apply_url?.trim() || "#",
-    atsStatus: item.ats_status,
+    atsStatus: normalizeAtsStatusFromApi(item.ats_status),
     saved: false,
     salary: item.salary?.trim() || null,
     description: (item.description ?? "").trim(),

@@ -1,12 +1,7 @@
-/** Mirrors `JobAtsStatus` from the backend OpenAPI schema. */
-export type ApiJobAtsStatus =
-  | "new"
-  | "shortlisted"
-  | "applied"
-  | "interviewing"
-  | "offer"
-  | "rejected"
-  | "archived";
+import type { JobAtsStatus } from "@/types/job";
+
+/** Canonical ATS statuses used in the jobs UI and list filters. */
+export type ApiJobAtsStatus = JobAtsStatus;
 
 /** Subset of `raw_payload` from upstream job search rows. */
 export type ApiJobRawPayload = {
@@ -31,7 +26,8 @@ export type ApiJobListItem = {
   experience_level?: string | null;
   skills?: string[] | null;
   shopify_relevance_score?: number | null;
-  ats_status: ApiJobAtsStatus;
+  /** Raw value from the API — normalize with `normalizeAtsStatusFromApi` before display. */
+  ats_status: string;
   apply_url: string;
   company_logo_url?: string | null;
   description?: string | null;
@@ -53,13 +49,33 @@ export type ApiJobsListSort = "relevance" | "newest";
 
 export const API_JOB_ATS_STATUSES = [
   "new",
-  "shortlisted",
   "applied",
   "interviewing",
   "offer",
-  "rejected",
-  "archived",
+  "failed",
 ] as const satisfies readonly ApiJobAtsStatus[];
+
+/** Maps API `ats_status` strings to the canonical UI status. */
+export function normalizeAtsStatusFromApi(raw: string): JobAtsStatus {
+  switch (raw) {
+    case "new":
+    case "applied":
+    case "interviewing":
+    case "offer":
+    case "failed":
+      return raw;
+    case "rejected":
+      return "failed";
+      return "new";
+    default:
+      return "new";
+  }
+}
+
+/** Maps UI filter status to the query value expected by the Python API. */
+export function toBackendAtsStatus(status: ApiJobAtsStatus): string {
+  return status === "failed" ? "rejected" : status;
+}
 
 export type FetchJobsListParams = {
   limit?: number;

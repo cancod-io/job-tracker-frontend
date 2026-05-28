@@ -149,7 +149,7 @@ export function ApplicationCard({
                 type="button"
                 role="menuitem"
                 onClick={() => { onEditNotes(app); setMenuOpen(false); }}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-xs font-medium text-foreground"
               >
                 <MessageSquare className="size-3.5 shrink-0 opacity-70" aria-hidden />
                 Edit notes
@@ -159,7 +159,7 @@ export function ApplicationCard({
                 type="button"
                 role="menuitem"
                 onClick={() => { copyLink(applyUrl); setMenuOpen(false); }}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-xs font-medium text-foreground"
               >
                 <LinkIcon className="size-3.5 shrink-0 opacity-70" aria-hidden />
                 Copy link
