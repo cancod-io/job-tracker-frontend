@@ -10,6 +10,7 @@ type UseApplyFlowReturn = {
   pendingApplyJobs: ReturnType<typeof useApplicationsStore.getState>["pendingApplyJobs"];
   confirmingIds: Set<string>;
   handleApplyClick: (job: Job) => void;
+  handleApplyAndTrackDirectly: (job: Job) => Promise<void>;
   handleConfirmApply: (id: string) => Promise<void>;
   dismissPending: (id: string) => void;
 };
@@ -48,6 +49,28 @@ export function useApplyFlow(): UseApplyFlowReturn {
     [addPendingApplyJob],
   );
 
+  const handleApplyAndTrackDirectly = useCallback(
+    async (job: Job) => {
+      const applyUrl = job.applyUrl?.trim() ?? "";
+      if (applyUrl && applyUrl !== "#") {
+        const opened = openApplyUrlInBackground(applyUrl);
+        if (!opened) {
+          notify.error("Pop-up blocked. Allow pop-ups for this site to open apply links.");
+        }
+      }
+
+      try {
+        await createApp(Number(job.id));
+        notify.success(`Marked as applied — ${job.title}`, {
+          title: "Application tracked",
+        });
+      } catch (e) {
+        notify.error(e instanceof Error ? e.message : "Could not save application.");
+      }
+    },
+    [createApp],
+  );
+
   const handleConfirmApply = useCallback(
     async (id: string) => {
       const pending = pendingApplyJobs.find((p) => p.id === id);
@@ -77,6 +100,7 @@ export function useApplyFlow(): UseApplyFlowReturn {
     pendingApplyJobs,
     confirmingIds,
     handleApplyClick,
+    handleApplyAndTrackDirectly,
     handleConfirmApply,
     dismissPending: removePendingApplyJob,
   };

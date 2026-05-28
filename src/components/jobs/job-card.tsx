@@ -1,17 +1,23 @@
-import {
-  Bookmark,
-  CheckCircle2,
-  ExternalLink,
-  MapPin,
-} from "lucide-react";
+import { Bookmark, ExternalLink, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { companyInitials } from "@/lib/company-utils";
-import { TRACKED_STATUS_BADGE, type TrackedInfo, type JobsViewMode } from "@/components/jobs/types";
+import { TrackedStatusBadge } from "@/components/jobs/tracked-status-badge";
+import type { TrackedInfo, JobsViewMode } from "@/components/jobs/types";
 import type { Job } from "@/types/job";
 
 function isInteractiveTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
   return Boolean(target.closest("a, button"));
+}
+
+function handleCardKeyDown(
+  e: React.KeyboardEvent<HTMLElement>,
+  onSelect: () => void,
+): void {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  if (isInteractiveTarget(e.target)) return;
+  e.preventDefault();
+  onSelect();
 }
 
 type JobCardProps = {
@@ -72,8 +78,12 @@ export function JobCard({
   if (viewMode === "list") {
     return (
       <article
-        className={cn(base, "cursor-pointer hover:-translate-y-px")}
+        className={cn(base, "cursor-pointer hover:-translate-y-px focus-visible:ring-2 focus-visible:ring-primary/45")}
         onClick={handleCardClick}
+        onKeyDown={(e) => handleCardKeyDown(e, onSelect)}
+        role="button"
+        tabIndex={0}
+        aria-label={`Open details for ${job.title} at ${job.company}`}
         aria-current={selected ? "true" : undefined}
       >
         <div className="flex items-center gap-3 px-4 py-2.5">
@@ -121,10 +131,11 @@ export function JobCard({
                 </span>
               ) : null}
               {trackedInfo ? (
-                <span className={cn("inline-flex items-center gap-0.5 rounded-full border px-1.5 py-px text-[10px] font-semibold", TRACKED_STATUS_BADGE[trackedInfo.status].className)}>
-                  <CheckCircle2 className="size-2.5 shrink-0" aria-hidden />
-                  {TRACKED_STATUS_BADGE[trackedInfo.status].label}
-                </span>
+                <TrackedStatusBadge
+                  status={trackedInfo.status}
+                  variant="pill"
+                  className="px-1.5 py-px text-[10px]"
+                />
               ) : null}
             </div>
             {job.description ? (
@@ -137,10 +148,11 @@ export function JobCard({
           {/* Actions */}
           <div className="ml-2 flex shrink-0 items-center gap-1.5">
             {trackedInfo ? (
-              <span className={cn("inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[11px] font-semibold", TRACKED_STATUS_BADGE[trackedInfo.status].className)}>
-                <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
-                {TRACKED_STATUS_BADGE[trackedInfo.status].label}
-              </span>
+              <TrackedStatusBadge
+                status={trackedInfo.status}
+                variant="button"
+                className="h-8 px-2.5 text-[11px]"
+              />
             ) : (
               <button
                 type="button"
@@ -154,12 +166,14 @@ export function JobCard({
             <button
               type="button"
               onClick={(e) => e.stopPropagation()}
+              disabled
               className={cn(
                 "inline-flex size-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                "disabled:cursor-not-allowed disabled:opacity-60",
                 job.saved && "border-amber-400/50 bg-amber-400/10 text-amber-600 dark:text-amber-400",
               )}
-              aria-pressed={job.saved}
-              aria-label={job.saved ? "Saved" : "Save for later"}
+              aria-label="Save for later (coming soon)"
+              title="Save for later (coming soon)"
             >
               <Bookmark className={cn("size-3.5 shrink-0", job.saved && "fill-current")} aria-hidden />
             </button>
@@ -175,8 +189,12 @@ export function JobCard({
 
   return (
     <article
-      className={cn(base, "flex h-full cursor-pointer flex-col hover:-translate-y-0.5")}
+      className={cn(base, "flex h-full cursor-pointer flex-col hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary/45")}
       onClick={handleCardClick}
+      onKeyDown={(e) => handleCardKeyDown(e, onSelect)}
+      role="button"
+      tabIndex={0}
+      aria-label={`Open details for ${job.title} at ${job.company}`}
       aria-current={selected ? "true" : undefined}
     >
       {/* Body */}
@@ -204,6 +222,9 @@ export function JobCard({
 
         {/* Badges */}
         <div className="flex flex-wrap gap-1.5">
+          {trackedInfo ? (
+            <TrackedStatusBadge status={trackedInfo.status} variant="pill" />
+          ) : null}
           {job.salary ? (
             <span className={cn(badgeOutline, "text-foreground")}>{job.salary}</span>
           ) : null}
@@ -217,12 +238,6 @@ export function JobCard({
           ) : null}
           {job.experienceLevel !== "—" ? (
             <span className={badgeOutline}>{job.experienceLevel}</span>
-          ) : null}
-          {trackedInfo ? (
-            <span className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide", TRACKED_STATUS_BADGE[trackedInfo.status].className)}>
-              <CheckCircle2 className="size-3 shrink-0" aria-hidden />
-              {TRACKED_STATUS_BADGE[trackedInfo.status].label}
-            </span>
           ) : null}
         </div>
 
@@ -256,17 +271,18 @@ export function JobCard({
       <div className="flex flex-col gap-1.5 border-t border-border/60 px-4 py-3">
         {trackedInfo ? (
           <div className="flex gap-2">
-            <span className={cn("inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-semibold", TRACKED_STATUS_BADGE[trackedInfo.status].className)}>
-              <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
-              {TRACKED_STATUS_BADGE[trackedInfo.status].label}
-            </span>
+            <TrackedStatusBadge
+              status={trackedInfo.status}
+              variant="button"
+              className="h-9 flex-1 justify-center px-3 text-xs"
+            />
             <a
               href={job.applyUrl}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
               className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              aria-label={`Open job posting for ${job.title}`}
+              aria-label={`Open job posting for ${job.title} at ${job.company}`}
             >
               <ExternalLink className="size-3.5 shrink-0" aria-hidden />
               Open
@@ -285,12 +301,14 @@ export function JobCard({
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
+          disabled
           className={cn(
             "inline-flex h-9 py-2 flex-1 items-center justify-center gap-1.5 rounded-lg border border-dashed border-border px-3 text-[11px] font-medium text-muted-foreground hover:border-primary/40 hover:bg-muted/50 hover:text-foreground",
+            "disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-border disabled:hover:bg-transparent disabled:hover:text-muted-foreground",
             job.saved && "border-amber-400/50 bg-amber-400/10 text-amber-600 dark:text-amber-400",
           )}
-          aria-pressed={job.saved}
-          aria-label={job.saved ? "Saved" : "Save for later"}
+          aria-label="Save for later (coming soon)"
+          title="Save for later (coming soon)"
         >
           <Bookmark className={cn("size-3.5 shrink-0", job.saved && "fill-current")} aria-hidden />
           {job.saved ? "Saved" : "Save for later"}

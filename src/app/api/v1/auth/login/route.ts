@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getInternalApiBase } from "@/lib/api";
+import { BACKEND_OFFLINE_MESSAGE, BACKEND_TIMEOUT_MESSAGE } from "@/lib/backend-errors";
 import { CORS_HEADERS, optionsResponse } from "@/lib/cors";
 
 export async function OPTIONS() {
@@ -35,15 +36,12 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {
       return NextResponse.json(
-        { detail: "Request to backend timed out. Check API_INTERNAL_URL." },
+        { detail: BACKEND_TIMEOUT_MESSAGE },
         { status: 504, headers: CORS_HEADERS },
       );
     }
     return NextResponse.json(
-      {
-        detail:
-          "Could not reach the auth API from the Next.js server. Set API_INTERNAL_URL (e.g. http://127.0.0.1:8000) to a backend address reachable from this machine.",
-      },
+      { detail: BACKEND_OFFLINE_MESSAGE },
       { status: 502, headers: CORS_HEADERS },
     );
   } finally {

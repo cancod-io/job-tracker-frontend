@@ -1,3 +1,5 @@
+import { BACKEND_OFFLINE_MESSAGE, BACKEND_TIMEOUT_MESSAGE } from "@/lib/backend-errors";
+
 /** Stable API error codes from backend `AppError`. */
 
 export type LoginField = "email" | "password";
@@ -134,10 +136,10 @@ export function isSessionExpiredError(err: unknown): err is SessionExpiredError 
 export function networkErrorMessage(err: unknown): string | null {
   if (!(err instanceof Error)) return null;
   if (err.name === "AbortError") {
-    return "Could not reach the API (timed out). Check that the backend is running and API_INTERNAL_URL is set correctly.";
+    return BACKEND_TIMEOUT_MESSAGE;
   }
   if (err.message === "Failed to fetch" || err.message.includes("NetworkError")) {
-    return "Could not reach the API. Check that the backend is running and API_INTERNAL_URL is set correctly.";
+    return BACKEND_OFFLINE_MESSAGE;
   }
   return null;
 }

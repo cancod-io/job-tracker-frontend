@@ -13,7 +13,32 @@ import { cn } from "@/lib/utils";
 import { jobAtsStatusBadgeClass, jobAtsStatusLabel } from "@/lib/application-status-badge";
 import { copyTextToClipboard } from "@/lib/copy-to-clipboard";
 import { notify } from "@/lib/notify";
-import type { Job } from "@/types/job";
+import { TrackedStatusBadge } from "@/components/jobs/tracked-status-badge";
+import type { TrackedInfo } from "@/components/jobs/types";
+import type { Job, JobAtsStatus } from "@/types/job";
+import type { ApiApplicationStatus } from "@/types/application";
+
+const TRACKED_APPLICATION_STATUSES: readonly ApiApplicationStatus[] = [
+  "applied",
+  "interviewing",
+  "offer",
+  "failed",
+];
+
+/** Job ATS values that block the apply / add-to-applications action in the detail panel. */
+const BLOCKING_JOB_ATS_STATUSES: readonly JobAtsStatus[] = [
+  "applied",
+  "interviewing",
+  "offer",
+  "rejected",
+];
+
+function isApplyActionBlocked(job: Job, trackedInfo?: TrackedInfo): boolean {
+  if (trackedInfo && TRACKED_APPLICATION_STATUSES.includes(trackedInfo.status)) {
+    return true;
+  }
+  return BLOCKING_JOB_ATS_STATUSES.includes(job.atsStatus);
+}
 
 function copyJobLink(job: Job): void {
   const url = job.applyUrl?.trim();
@@ -57,13 +82,34 @@ function externalHref(url: string): string {
 type JobDetailPanelProps = {
   job: Job;
   onClose: () => void;
+  trackedInfo?: TrackedInfo;
+  onApplyClick: (job: Job) => void;
 };
+
+const applyPrimaryBtnClass = cn(
+  "inline-flex h-10 min-h-10 flex-1 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold shadow-sm md:flex-initial",
+  "bg-primary text-primary-foreground transition-[transform,background-color,opacity]",
+  "hover:opacity-90 active:scale-[0.99] motion-reduce:active:scale-100",
+  "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
+);
+
+/** Secondary footer actions — visible border + fill in light and dark mode. */
+const footerSecondaryBtnClass = cn(
+  "inline-flex h-10 min-h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold shadow-sm",
+  "border-2 border-border bg-muted text-foreground",
+  "transition-colors hover:border-primary/45 hover:bg-muted/90",
+  "dark:border-border/90 dark:bg-muted/70 dark:hover:bg-muted",
+);
 
 /**
  * Slide-over detail panel that shows full job information.
  * Renders inside the animated overlay managed by `JobsList`.
  */
-export function JobDetailPanel({ job, onClose }: JobDetailPanelProps) {
+export function JobDetailPanel({ job, onClose, trackedInfo, onApplyClick }: JobDetailPanelProps) {
+  const applyBlocked = isApplyActionBlocked(job, trackedInfo);
+  const applyUrl = job.applyUrl?.trim() ?? "";
+  const hasApplyUrl = Boolean(applyUrl && applyUrl !== "#");
+
   return (
     <aside
       className="flex h-full min-h-0 flex-col overflow-hidden bg-card"
@@ -112,14 +158,18 @@ export function JobDetailPanel({ job, onClose }: JobDetailPanelProps) {
               {job.employmentLabel}
             </span>
           ) : null}
-          <span
-            className={cn(
-              "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium",
-              jobAtsStatusBadgeClass(job.atsStatus),
-            )}
-          >
-            {jobAtsStatusLabel(job.atsStatus)}
-          </span>
+          {trackedInfo ? (
+            <TrackedStatusBadge status={trackedInfo.status} variant="pill" />
+          ) : (
+            <span
+              className={cn(
+                "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium",
+                jobAtsStatusBadgeClass(job.atsStatus),
+              )}
+            >
+              {jobAtsStatusLabel(job.atsStatus)}
+            </span>
+          )}
         </div>
 
         {/* Meta row */}
@@ -178,30 +228,51 @@ export function JobDetailPanel({ job, onClose }: JobDetailPanelProps) {
 
       {/* ── Footer actions ── */}
       <div className="flex flex-col gap-2 border-t border-border/70 bg-muted/20 px-4 py-4 md:flex-row md:flex-wrap md:items-center md:px-5">
-        <a
-          href={job.applyUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex h-10 min-h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-[transform,background-color] hover:opacity-90 active:scale-[0.99] motion-reduce:active:scale-100 md:flex-initial"
-        >
-          Apply now
-          <ExternalLink className="size-4 shrink-0" aria-hidden />
-        </a>
-        <button
-          type="button"
-          onClick={() => copyJobLink(job)}
-          className="inline-flex h-10 min-h-10 items-center justify-center gap-2 rounded-lg border border-input bg-background px-4 text-sm font-medium text-secondary-foreground shadow-sm transition-colors hover:bg-muted"
-        >
-          <LinkIcon className="size-4 shrink-0 opacity-70" aria-hidden />
+        {trackedInfo ? (
+          <TrackedStatusBadge
+            status={trackedInfo.status}
+            variant="button"
+            className="h-10 min-h-10 flex-1 px-4 text-sm md:flex-initial"
+          />
+        ) : (
+          <button
+            type="button"
+            disabled={applyBlocked}
+            onClick={() => onApplyClick(job)}
+            className={applyPrimaryBtnClass}
+            aria-label={
+              applyBlocked
+                ? `Apply unavailable — status is ${jobAtsStatusLabel(job.atsStatus)}`
+                : `Apply to ${job.title} at ${job.company}`
+            }
+          >
+            Apply now
+            <ExternalLink className="size-4 shrink-0" aria-hidden />
+          </button>
+        )}
+        {trackedInfo && hasApplyUrl ? (
+          <a
+            href={applyUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={footerSecondaryBtnClass}
+            aria-label={`Open job posting for ${job.title}`}
+          >
+            <ExternalLink className="size-4 shrink-0" aria-hidden />
+            Open posting
+          </a>
+        ) : null}
+        <button type="button" onClick={() => copyJobLink(job)} className={footerSecondaryBtnClass}>
+          <LinkIcon className="size-4 shrink-0" aria-hidden />
           Copy link
         </button>
         <button
           type="button"
           onClick={() => copyJobId(job)}
-          className="inline-flex h-10 min-h-10 items-center justify-center gap-2 rounded-lg border border-input bg-background px-4 text-sm font-medium text-secondary-foreground shadow-sm transition-colors hover:bg-muted"
+          className={footerSecondaryBtnClass}
           aria-label={`Copy job ID ${job.id}`}
         >
-          <Copy className="size-4 shrink-0 opacity-70" aria-hidden />
+          <Copy className="size-4 shrink-0" aria-hidden />
           Copy job ID
         </button>
         {job.employerWebsite ? (
@@ -209,9 +280,9 @@ export function JobDetailPanel({ job, onClose }: JobDetailPanelProps) {
             href={externalHref(job.employerWebsite)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-10 min-h-10 items-center justify-center gap-2 rounded-lg border border-input bg-background px-4 text-sm font-medium text-secondary-foreground shadow-sm transition-colors hover:bg-muted"
+            className={footerSecondaryBtnClass}
           >
-            <Building2 className="size-4 shrink-0 opacity-70" aria-hidden />
+            <Building2 className="size-4 shrink-0" aria-hidden />
             Company site
           </a>
         ) : null}
