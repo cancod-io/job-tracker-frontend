@@ -42,7 +42,7 @@ export const TRACKED_STATUS_BADGE: Record<
     className: "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   },
   failed: {
-    label: "Not selected",
+    label: "Failed",
     className: "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300",
   },
 };

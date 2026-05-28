@@ -286,7 +286,7 @@ export function JobCard({
           type="button"
           onClick={(e) => e.stopPropagation()}
           className={cn(
-            "inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-dashed border-border px-3 text-[11px] font-medium text-muted-foreground hover:border-primary/40 hover:bg-muted/50 hover:text-foreground",
+            "inline-flex h-9 py-2 flex-1 items-center justify-center gap-1.5 rounded-lg border border-dashed border-border px-3 text-[11px] font-medium text-muted-foreground hover:border-primary/40 hover:bg-muted/50 hover:text-foreground",
             job.saved && "border-amber-400/50 bg-amber-400/10 text-amber-600 dark:text-amber-400",
           )}
           aria-pressed={job.saved}
