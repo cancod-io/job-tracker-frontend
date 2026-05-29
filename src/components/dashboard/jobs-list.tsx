@@ -22,12 +22,12 @@ import { ApplyConfirmBanner } from "@/components/jobs/apply-confirm-banner";
 import {
   buildJobsListHref,
   buildPaginationItems,
-  type JobsListAtsStatusFilter,
   type JobsViewMode,
   type PageSizeOption,
   type TrackedInfo,
   DETAIL_TRANSITION_MS,
 } from "@/components/jobs/types";
+import type { ApiJobsSortBy } from "@/types/api-jobs";
 import type { ExperienceLevel, Job, JobType } from "@/types/job";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -94,7 +94,7 @@ function scrollToPageTop(): void {
 
 /**
  * Primary job-listings component. Composes:
- *  - `useJobsListUrlState` for URL-derived state (page, sort, perPage, atsStatus)
+ *  - `useJobsListUrlState` for URL-derived state (page, sortBy, perPage)
  *  - `useDebouncedValue` for search input
  *  - `useSlideOverPanel` for the detail panel state machine
  *  - `useApplyFlow` for the Apply → confirm banner workflow
@@ -104,7 +104,7 @@ export function JobsList() {
   const pathname = usePathname();
 
   // ── URL state ─────────────────────────────────────────────────────────────
-  const { page, sort, perPage, atsStatus, searchParamsKey } = useJobsListUrlState();
+  const { page, sortBy, perPage, searchParamsKey } = useJobsListUrlState();
 
   // ── Client filter store (selector-sliced to avoid extra re-renders) ───────
   const experience = useJobFiltersStore((s) => s.experience);
@@ -151,8 +151,7 @@ export function JobsList() {
   const jobsQuery = useJobsListQuery({
     page,
     perPage,
-    sort,
-    atsStatus,
+    sortBy,
     query: debouncedQuery,
   });
   const total = jobsQuery.data?.total ?? 0;
@@ -160,7 +159,7 @@ export function JobsList() {
   const isRefreshing = jobsQuery.isFetching && !jobsQuery.isPending;
   const showCardSkeletons = loading || isRefreshing;
   const jobs = useMemo(() => jobsQuery.data?.jobs ?? [], [jobsQuery.data]);
-
+console.log(jobsQuery.data)
   useEffect(() => {
     if (!jobsQuery.error) return;
     notify.error(jobsQuery.error instanceof Error ? jobsQuery.error.message : "Could not load jobs.");
@@ -207,9 +206,8 @@ export function JobsList() {
   const navigateList = useCallback(
     (patch: {
       page?: number;
-      sort?: typeof sort;
+      sortBy?: ApiJobsSortBy;
       perPage?: PageSizeOption;
-      atsStatus?: JobsListAtsStatusFilter;
     }) => {
       scrollToPageTop();
       const sp = new URLSearchParams(searchParamsKey);
@@ -235,7 +233,7 @@ export function JobsList() {
     // Identity of `closeDetail` & `visibleJobs` would re-fire this on every render;
     // we only want to fire on the inputs that change the result set.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedQuery, page, perPage, sort, atsStatus, experience, jobType]);
+  }, [debouncedQuery, page, perPage, sortBy, experience, jobType]);
 
   // ── Apply flow ────────────────────────────────────────────────────────────
   const {
@@ -268,8 +266,8 @@ export function JobsList() {
         loading={loading}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        urlAtsStatus={atsStatus}
-        onAtsStatusChange={(status) => navigateList({ atsStatus: status, page: 1 })}
+        sortBy={sortBy}
+        onSortByChange={(next) => navigateList({ sortBy: next, page: 1 })}
       />
 
       <JobsPagination placement="top" {...sharedPaginationProps} />

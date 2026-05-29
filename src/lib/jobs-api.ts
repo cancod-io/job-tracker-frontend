@@ -1,13 +1,13 @@
 import { authRequestHeaders } from "@/lib/auth-token";
 import { assertOkResponse, fetchWithTimeout } from "@/lib/http";
-import { toBackendAtsStatus, type ApiJobListResponse, type FetchJobsListParams } from "@/types/api-jobs";
+import type { ApiJobListResponse, FetchJobsListParams } from "@/types/api-jobs";
 
 function appendJobsQueryParams(search: URLSearchParams, params: FetchJobsListParams): void {
   const limit = params.limit ?? 20;
   const offset = params.offset ?? 0;
   search.set("limit", String(limit));
   search.set("offset", String(offset));
-  search.set("sort", params.sort ?? "relevance");
+  search.set("sort_by", params.sort_by ?? "new");
   search.set("include_inactive", String(params.include_inactive ?? false));
   search.set("include_duplicates", String(params.include_duplicates ?? false));
 
@@ -19,7 +19,6 @@ function appendJobsQueryParams(search: URLSearchParams, params: FetchJobsListPar
   if (company) search.set("company", company);
   const location = params.location?.trim();
   if (location) search.set("location", location);
-  if (params.ats_status) search.set("ats_status", toBackendAtsStatus(params.ats_status));
 }
 
 export async function fetchJobsList(params: FetchJobsListParams = {}): Promise<ApiJobListResponse> {

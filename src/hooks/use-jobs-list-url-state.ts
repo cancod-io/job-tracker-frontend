@@ -3,26 +3,23 @@
 import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  parseAtsStatusFromSearchParams,
   parsePageFromSearchParams,
   parsePerPageFromSearchParams,
-  parseSortFromSearchParams,
-  type JobsListAtsStatusFilter,
-  type JobsListSortMode,
+  parseSortByFromSearchParams,
   type PageSizeOption,
 } from "@/components/jobs/types";
+import type { ApiJobsSortBy } from "@/types/api-jobs";
 
 export type JobsListUrlState = {
   page: number;
-  sort: JobsListSortMode;
+  sortBy: ApiJobsSortBy;
   perPage: PageSizeOption;
-  atsStatus: JobsListAtsStatusFilter;
   /** Stable serialized form of the URL params — safe to use as a dep key. */
   searchParamsKey: string;
 };
 
 /**
- * Reads page/sort/perPage/atsStatus from the URL in a single allocation,
+ * Reads page, sort_by, and per_page from the URL in a single allocation,
  * memoized against the serialized search-params string.
  */
 export function useJobsListUrlState(): JobsListUrlState {
@@ -32,9 +29,8 @@ export function useJobsListUrlState(): JobsListUrlState {
     const sp = new URLSearchParams(searchParamsKey);
     return {
       page: parsePageFromSearchParams(sp),
-      sort: parseSortFromSearchParams(sp),
+      sortBy: parseSortByFromSearchParams(sp),
       perPage: parsePerPageFromSearchParams(sp),
-      atsStatus: parseAtsStatusFromSearchParams(sp),
       searchParamsKey,
     };
   }, [searchParamsKey]);

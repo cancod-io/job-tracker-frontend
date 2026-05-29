@@ -3,14 +3,13 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { fetchJobsList } from "@/lib/jobs-api";
 import { mapApiJobListItemToJob } from "@/lib/job-mapper";
-import type { JobsListAtsStatusFilter, JobsListSortMode } from "@/components/jobs/types";
 import type { Job } from "@/types/job";
+import type { ApiJobsSortBy } from "@/types/api-jobs";
 
 type UseJobsListQueryParams = {
   page: number;
   perPage: number;
-  sort: JobsListSortMode;
-  atsStatus: JobsListAtsStatusFilter;
+  sortBy: ApiJobsSortBy;
   query: string;
 };
 
@@ -22,20 +21,18 @@ type JobsListQueryData = {
 export function useJobsListQuery({
   page,
   perPage,
-  sort,
-  atsStatus,
+  sortBy,
   query,
 }: UseJobsListQueryParams) {
   return useQuery<JobsListQueryData>({
-    queryKey: ["jobs-list", page, perPage, sort, atsStatus, query],
+    queryKey: ["jobs-list", page, perPage, sortBy, query],
     placeholderData: keepPreviousData,
     queryFn: async () => {
       const offset = (page - 1) * perPage;
       const data = await fetchJobsList({
         limit: perPage,
         offset,
-        sort,
-        ats_status: atsStatus === "all" ? undefined : atsStatus,
+        sort_by: sortBy,
         include_inactive: false,
         include_duplicates: false,
         q: query.trim() || undefined,
