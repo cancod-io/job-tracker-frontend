@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   deleteApplicationFile,
   downloadApplicationFile,
@@ -10,6 +11,10 @@ import {
 } from "@/lib/application-files-api";
 import { notify } from "@/lib/notify";
 import type { ApiApplicationFile } from "@/types/application-file";
+
+export function applicationFilesQueryKey(applicationId: number) {
+  return ["application-files", applicationId] as const;
+}
 
 type UseApplicationFilesOptions = {
   /** When true, load failures are returned via `loadError` instead of a toast. */
@@ -33,90 +38,94 @@ export function useApplicationFiles(
   options: UseApplicationFilesOptions = {},
 ): UseApplicationFilesResult {
   const { silentLoad = false } = options;
-  const [files, setFiles] = useState<ApiApplicationFile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const queryClient = useQueryClient();
+  const queryKey = applicationFilesQueryKey(applicationId);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const next = await fetchApplicationFiles(applicationId);
-      setFiles(next);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not load attachments.";
-      setLoadError(message);
-      setFiles([]);
-      if (!silentLoad) notify.error(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [applicationId, silentLoad]);
+  const filesQuery = useQuery({
+    queryKey,
+    queryFn: () => fetchApplicationFiles(applicationId),
+  });
+
+  const loadError =
+    filesQuery.error instanceof Error
+      ? filesQuery.error.message
+      : filesQuery.error
+        ? "Could not load attachments."
+        : null;
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    if (silentLoad || !filesQuery.isError || !loadError) return;
+    notify.error(loadError);
+  }, [silentLoad, filesQuery.isError, loadError]);
 
-  const uploadFile = useCallback(
-    async (file: File): Promise<boolean> => {
-      const validationError = validateApplicationFile(file);
-      if (validationError) {
-        notify.error(validationError);
-        return false;
-      }
-
-      setUploading(true);
-      try {
-        const created = await uploadApplicationFile(applicationId, file);
-        setFiles((prev) => [created, ...prev]);
-        setLoadError(null);
-        notify.success(`Uploaded ${created.filename}`);
-        return true;
-      } catch (err) {
-        notify.error(err instanceof Error ? err.message : "Could not upload file.");
-        return false;
-      } finally {
-        setUploading(false);
-      }
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => uploadApplicationFile(applicationId, file),
+    onSuccess: (created) => {
+      queryClient.setQueryData<ApiApplicationFile[]>(queryKey, (prev) => [
+        created,
+        ...(prev ?? []),
+      ]);
+      notify.success(`Uploaded ${created.filename}`);
     },
-    [applicationId],
-  );
-
-  const deleteFile = useCallback(
-    async (file: ApiApplicationFile) => {
-      setDeletingId(file.id);
-      try {
-        await deleteApplicationFile(applicationId, file.id);
-        setFiles((prev) => prev.filter((item) => item.id !== file.id));
-        notify.success(`Removed ${file.filename}`);
-      } catch (err) {
-        notify.error(err instanceof Error ? err.message : "Could not delete file.");
-      } finally {
-        setDeletingId(null);
-      }
+    onError: (err) => {
+      notify.error(err instanceof Error ? err.message : "Could not upload file.");
     },
-    [applicationId],
-  );
+  });
 
-  const downloadFile = useCallback(
-    async (file: ApiApplicationFile) => {
-      try {
-        await downloadApplicationFile(applicationId, file);
-      } catch (err) {
-        notify.error(err instanceof Error ? err.message : "Could not download file.");
-      }
+  const deleteMutation = useMutation({
+    mutationFn: (file: ApiApplicationFile) => deleteApplicationFile(applicationId, file.id),
+    onSuccess: (_data, file) => {
+      queryClient.setQueryData<ApiApplicationFile[]>(queryKey, (prev) =>
+        (prev ?? []).filter((item) => item.id !== file.id),
+      );
+      notify.success(`Removed ${file.filename}`);
     },
-    [applicationId],
-  );
+    onError: (err) => {
+      notify.error(err instanceof Error ? err.message : "Could not delete file.");
+    },
+  });
+
+  async function uploadFile(file: File): Promise<boolean> {
+    const validationError = validateApplicationFile(file);
+    if (validationError) {
+      notify.error(validationError);
+      return false;
+    }
+
+    try {
+      await uploadMutation.mutateAsync(file);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function deleteFile(file: ApiApplicationFile): Promise<void> {
+    try {
+      await deleteMutation.mutateAsync(file);
+    } catch {
+      // Error toast handled in mutation onError.
+    }
+  }
+
+  async function downloadFile(file: ApiApplicationFile): Promise<void> {
+    try {
+      await downloadApplicationFile(applicationId, file);
+    } catch (err) {
+      notify.error(err instanceof Error ? err.message : "Could not download file.");
+    }
+  }
+
+  async function refresh(): Promise<void> {
+    await filesQuery.refetch();
+  }
 
   return {
-    files,
-    loading,
-    loadError,
-    uploading,
-    deletingId,
+    files: filesQuery.data ?? [],
+    loading: filesQuery.isLoading,
+    loadError: filesQuery.isError ? loadError : null,
+    uploading: uploadMutation.isPending,
+    deletingId: deleteMutation.isPending ? (deleteMutation.variables?.id ?? null) : null,
     uploadFile,
     deleteFile,
     downloadFile,

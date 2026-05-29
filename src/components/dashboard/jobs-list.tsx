@@ -159,7 +159,6 @@ export function JobsList() {
   const isRefreshing = jobsQuery.isFetching && !jobsQuery.isPending;
   const showCardSkeletons = loading || isRefreshing;
   const jobs = useMemo(() => jobsQuery.data?.jobs ?? [], [jobsQuery.data]);
-console.log(jobsQuery.data)
   useEffect(() => {
     if (!jobsQuery.error) return;
     notify.error(jobsQuery.error instanceof Error ? jobsQuery.error.message : "Could not load jobs.");
