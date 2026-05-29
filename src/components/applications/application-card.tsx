@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { freshnessColor, relativeDate } from "@/lib/date-utils";
 import { companyInitials } from "@/lib/company-utils";
 import { companyName, jobTitle } from "@/lib/application-utils";
+import { ApplicationFilesPanel } from "@/components/applications/application-files-section";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { copyTextToClipboard } from "@/lib/copy-to-clipboard";
 import { notify } from "@/lib/notify";
@@ -79,7 +80,7 @@ export function ApplicationCard({
       onDragStart={(e) => onDragStart(e, app)}
       onDragEnd={onDragEnd}
       onClick={(e) => {
-        if ((e.target as Element).closest("button, a")) return;
+        if ((e.target as Element).closest("button, a, input, label")) return;
         onCardClick(app);
       }}
       className={cn(
@@ -234,6 +235,8 @@ export function ApplicationCard({
           {app.notes.trim()}
         </p>
       ) : null}
+
+      <ApplicationFilesPanel applicationId={app.id} variant="card" />
 
       {/* ── Footer ── */}
       <div className="mt-3 flex items-center justify-between border-t border-border/50 pt-2.5">
