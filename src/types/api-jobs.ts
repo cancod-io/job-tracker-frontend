@@ -45,7 +45,30 @@ export type ApiJobListResponse = {
   offset: number;
 };
 
-export type ApiJobsListSort = "relevance" | "newest";
+/** `GET /api/v1/jobs` — `sort_by` query values (pipeline sort / filter). */
+export const API_JOBS_SORT_BY = [
+  "new",
+  "applied",
+  "interviewing",
+  "offer",
+  "rejected",
+] as const;
+export type ApiJobsSortBy = (typeof API_JOBS_SORT_BY)[number];
+
+export function jobsSortByLabel(sortBy: ApiJobsSortBy): string {
+  switch (sortBy) {
+    case "new":
+      return "New (newest first)";
+    case "applied":
+      return "Applied";
+    case "interviewing":
+      return "Interviewing";
+    case "offer":
+      return "Offer";
+    case "rejected":
+      return "Failed";
+  }
+}
 
 export const API_JOB_ATS_STATUSES = [
   "new",
@@ -66,22 +89,18 @@ export function normalizeAtsStatusFromApi(raw: string): JobAtsStatus {
       return raw;
     case "rejected":
       return "failed";
+    case "shortlisted":
+    case "archived":
       return "new";
     default:
       return "new";
   }
 }
 
-/** Maps UI filter status to the query value expected by the Python API. */
-export function toBackendAtsStatus(status: ApiJobAtsStatus): string {
-  return status === "failed" ? "rejected" : status;
-}
-
 export type FetchJobsListParams = {
   limit?: number;
   offset?: number;
-  sort?: ApiJobsListSort;
-  ats_status?: ApiJobAtsStatus;
+  sort_by?: ApiJobsSortBy;
   include_inactive?: boolean;
   include_duplicates?: boolean;
   q?: string;

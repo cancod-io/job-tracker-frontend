@@ -1,12 +1,13 @@
 import type { ApiApplicationStatus } from "@/types/application";
+import { API_JOBS_SORT_BY, type ApiJobsSortBy } from "@/types/api-jobs";
 
 // ─── View mode ─────────────────────────────────────────────────────────────
 
 export type JobsViewMode = "list" | "card";
 
-// ─── Sort mode ─────────────────────────────────────────────────────────────
+// ─── Sort (API query params) ───────────────────────────────────────────────
 
-export type JobsListSortMode = "relevance" | "newest";
+export const DEFAULT_JOBS_SORT_BY: ApiJobsSortBy = "new";
 
 // ─── Pagination ────────────────────────────────────────────────────────────
 
@@ -46,9 +47,8 @@ export const TRACKED_STATUS_BADGE: Record<
 // ─── URL param keys ────────────────────────────────────────────────────────
 
 export const URL_PAGE_KEY = "page";
-export const URL_SORT_KEY = "sort";
+export const URL_SORT_BY_KEY = "sort_by";
 export const URL_PER_PAGE_KEY = "per_page";
-export const URL_ATS_STATUS_KEY = "ats_status";
 
 // ─── Detail panel ──────────────────────────────────────────────────────────
 
@@ -77,10 +77,6 @@ export function buildPaginationItems(current: number, totalPages: number): Pagin
 
 // ─── URL helpers ───────────────────────────────────────────────────────────
 
-import { API_JOB_ATS_STATUSES } from "@/types/api-jobs";
-
-export type JobsListAtsStatusFilter = "all" | (typeof API_JOB_ATS_STATUSES)[number];
-
 export function parsePageFromSearchParams(sp: URLSearchParams): number {
   const raw = sp.get(URL_PAGE_KEY);
   if (!raw) return 1;
@@ -97,16 +93,23 @@ export function parsePerPageFromSearchParams(sp: URLSearchParams): PageSizeOptio
     : DEFAULT_PAGE_SIZE;
 }
 
-export function parseSortFromSearchParams(sp: URLSearchParams): JobsListSortMode {
-  return sp.get(URL_SORT_KEY) === "newest" ? "newest" : "relevance";
+function isApiJobsSortBy(value: string): value is ApiJobsSortBy {
+  return (API_JOBS_SORT_BY as readonly string[]).includes(value);
 }
 
-export function parseAtsStatusFromSearchParams(sp: URLSearchParams): JobsListAtsStatusFilter {
-  const raw = sp.get(URL_ATS_STATUS_KEY);
-  if (!raw) return "all";
-  return (API_JOB_ATS_STATUSES as readonly string[]).includes(raw)
-    ? (raw as JobsListAtsStatusFilter)
-    : "all";
+function legacySortToSortBy(legacy: string | null): ApiJobsSortBy | null {
+  if (!legacy) return null;
+  if (legacy === "newest" || legacy === "posted_at") return "new";
+  if (legacy === "application_status" || legacy === "relevance") return "applied";
+  if (legacy === "failed") return "rejected";
+  if (isApiJobsSortBy(legacy)) return legacy;
+  return null;
+}
+
+export function parseSortByFromSearchParams(sp: URLSearchParams): ApiJobsSortBy {
+  const raw = sp.get(URL_SORT_BY_KEY) ?? legacySortToSortBy(sp.get("sort"));
+  if (raw && isApiJobsSortBy(raw)) return raw;
+  return DEFAULT_JOBS_SORT_BY;
 }
 
 export function buildJobsListHref(
@@ -114,28 +117,27 @@ export function buildJobsListHref(
   base: URLSearchParams,
   patch: {
     page?: number;
-    sort?: JobsListSortMode;
+    sortBy?: ApiJobsSortBy;
     perPage?: PageSizeOption;
-    atsStatus?: JobsListAtsStatusFilter;
   },
 ): string {
   const params = new URLSearchParams(base.toString());
   const page = patch.page ?? parsePageFromSearchParams(params);
-  const sort = patch.sort ?? parseSortFromSearchParams(params);
+  const sortBy = patch.sortBy ?? parseSortByFromSearchParams(params);
   const perPage = patch.perPage ?? parsePerPageFromSearchParams(params);
-  const atsStatus = patch.atsStatus ?? parseAtsStatusFromSearchParams(params);
+
+  params.delete("sort");
+  params.delete("sort_order");
+  params.delete("ats_status");
 
   if (page <= 1) params.delete(URL_PAGE_KEY);
   else params.set(URL_PAGE_KEY, String(page));
 
-  if (sort === "relevance") params.delete(URL_SORT_KEY);
-  else params.set(URL_SORT_KEY, sort);
+  if (sortBy === DEFAULT_JOBS_SORT_BY) params.delete(URL_SORT_BY_KEY);
+  else params.set(URL_SORT_BY_KEY, sortBy);
 
   if (perPage === DEFAULT_PAGE_SIZE) params.delete(URL_PER_PAGE_KEY);
   else params.set(URL_PER_PAGE_KEY, String(perPage));
-
-  if (atsStatus === "all") params.delete(URL_ATS_STATUS_KEY);
-  else params.set(URL_ATS_STATUS_KEY, atsStatus);
 
   const qs = params.toString();
   const hash = pathname === "/" ? "#jobs" : "";

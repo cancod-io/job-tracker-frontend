@@ -3,9 +3,9 @@
 import { LayoutGrid, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SearchInput } from "@/components/ui/search-input";
-import { jobAtsStatusLabel } from "@/lib/application-status-badge";
-import { API_JOB_ATS_STATUSES } from "@/types/api-jobs";
-import type { JobsViewMode, JobsListAtsStatusFilter } from "@/components/jobs/types";
+import { API_JOBS_SORT_BY, jobsSortByLabel } from "@/types/api-jobs";
+import type { JobsViewMode } from "@/components/jobs/types";
+import type { ApiJobsSortBy } from "@/types/api-jobs";
 import { useJobFiltersStore } from "@/store/job-filters";
 
 type JobsToolbarProps = {
@@ -13,20 +13,20 @@ type JobsToolbarProps = {
   loading: boolean;
   viewMode: JobsViewMode;
   onViewModeChange: (mode: JobsViewMode) => void;
-  urlAtsStatus: JobsListAtsStatusFilter;
-  onAtsStatusChange: (status: JobsListAtsStatusFilter) => void;
+  sortBy: ApiJobsSortBy;
+  onSortByChange: (sortBy: ApiJobsSortBy) => void;
 };
 
 /**
- * Toolbar above the jobs list: inline search, ATS-status filter, and view-mode toggle.
+ * Toolbar above the jobs list: search, sort_by, and view-mode toggle.
  */
 export function JobsToolbar({
   total,
   loading,
   viewMode,
   onViewModeChange,
-  urlAtsStatus,
-  onAtsStatusChange,
+  sortBy,
+  onSortByChange,
 }: JobsToolbarProps) {
   const { query, setQuery } = useJobFiltersStore();
 
@@ -51,7 +51,6 @@ export function JobsToolbar({
 
       {/* Right: controls */}
       <div className="flex flex-wrap items-end justify-end gap-3 sm:shrink-0">
-        {/* Search */}
         <SearchInput
           value={query}
           onChange={setQuery}
@@ -60,35 +59,30 @@ export function JobsToolbar({
           className="w-full sm:w-64"
         />
 
-        {/* ATS-status filter */}
         <div className="flex min-w-0 flex-col gap-1.5">
-          <label htmlFor="jobs-ats-status" className="sr-only">
-            Application status
+          <label htmlFor="jobs-sort-by" className="sr-only">
+            Sort by
           </label>
           <select
-            id="jobs-ats-status"
-            value={urlAtsStatus}
+            id="jobs-sort-by"
+            value={sortBy}
             onChange={(e) => {
               const v = e.target.value;
-              const next: JobsListAtsStatusFilter =
-                v === "all" || !(API_JOB_ATS_STATUSES as readonly string[]).includes(v)
-                  ? "all"
-                  : (v as JobsListAtsStatusFilter);
-              onAtsStatusChange(next);
+              if ((API_JOBS_SORT_BY as readonly string[]).includes(v)) {
+                onSortByChange(v as ApiJobsSortBy);
+              }
             }}
-            className="form-control h-10 min-w-[10.5rem] cursor-pointer rounded-xl text-sm shadow-sm sm:min-w-[11rem]"
-            aria-label="Filter by application status"
+            className="form-control h-10 min-w-[10.5rem] cursor-pointer rounded-xl text-sm shadow-sm sm:min-w-[12rem]"
+            aria-label="Sort jobs"
           >
-            <option value="all">All statuses</option>
-            {API_JOB_ATS_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {jobAtsStatusLabel(status)}
+            {API_JOBS_SORT_BY.map((value) => (
+              <option key={value} value={value}>
+                {jobsSortByLabel(value)}
               </option>
             ))}
           </select>
         </div>
 
-        {/* View mode toggle */}
         <div
           className="inline-flex shrink-0 rounded-full border border-input bg-muted/50 p-1 shadow-sm"
           role="group"
