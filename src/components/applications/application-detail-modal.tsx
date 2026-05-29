@@ -16,6 +16,7 @@ import { formatDate } from "@/lib/date-utils";
 import { companyInitials } from "@/lib/company-utils";
 import { companyName, copyAppToClipboard, jobTitle } from "@/lib/application-utils";
 import { COLUMNS } from "@/components/applications/constants";
+import { ApplicationFilesPanel } from "@/components/applications/application-files-section";
 import type { ApiApplication, ApiApplicationStatus } from "@/types/application";
 
 type ApplicationDetailModalProps = {
@@ -187,6 +188,8 @@ export function ApplicationDetailModal({
               <p className="text-xs italic text-muted-foreground">No notes yet.</p>
             )}
           </div>
+
+          <ApplicationFilesPanel applicationId={app.id} variant="detail" />
 
           {/* Move to column */}
           {otherColumns.length > 0 ? (

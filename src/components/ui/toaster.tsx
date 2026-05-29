@@ -1,5 +1,7 @@
 "use client";
 
+import { createPortal } from "react-dom";
+import { useEffect, useState } from "react";
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from "lucide-react";
 import {
   useNotificationStore,
@@ -7,6 +9,8 @@ import {
   type NotificationVariant,
 } from "@/store/notification-store";
 import { cn } from "@/lib/utils";
+
+const TOAST_Z_INDEX = 9999;
 
 const variantIcons: Record<NotificationVariant, typeof AlertCircle> = {
   success: CheckCircle2,
@@ -24,7 +28,7 @@ function ToastCard({ item, onDismiss }: { item: NotificationItem; onDismiss: () 
       role={item.variant === "error" ? "alert" : "status"}
       aria-live={item.variant === "error" ? "assertive" : "polite"}
       className={cn(
-        "toast-shell w-[min(100vw-2rem,23rem)] motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-left-3 motion-safe:duration-300 motion-reduce:animate-none",
+        "toast-shell pointer-events-auto w-[min(100vw-2rem,23rem)] motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2 motion-safe:duration-300 motion-reduce:animate-none",
       )}
     >
       <div className="toast-icon">
@@ -51,17 +55,24 @@ function ToastCard({ item, onDismiss }: { item: NotificationItem; onDismiss: () 
 export function Toaster() {
   const items = useNotificationStore((s) => s.items);
   const dismiss = useNotificationStore((s) => s.dismiss);
+  const [mounted, setMounted] = useState(false);
 
-  if (items.length === 0) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  return (
+  if (!mounted || items.length === 0) return null;
+
+  return createPortal(
     <div
-      className="pointer-events-none fixed left-4 top-4 z-[200] flex w-[min(100vw-2rem,23rem)] flex-col items-stretch gap-3 sm:left-5 sm:top-5"
+      className="pointer-events-none fixed inset-x-0 top-0 flex flex-col items-center gap-3 px-4 pt-4 sm:px-5 sm:pt-5"
+      style={{ zIndex: TOAST_Z_INDEX }}
       aria-label="Notifications"
     >
       {items.map((item) => (
         <ToastCard key={item.id} item={item} onDismiss={() => dismiss(item.id)} />
       ))}
-    </div>
+    </div>,
+    document.body,
   );
 }
