@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ChevronDown, LogOut, Settings, UserRound } from "lucide-react";
 import { LOGIN_PATH, REGISTER_PATH } from "@/config/auth-routes";
 import { useAuth } from "@/providers/auth-provider";
+import { useProfileQuery } from "@/hooks/use-profile";
+import { useAvatarDisplayUrl } from "@/hooks/use-avatar-display-url";
 import { cn } from "@/lib/utils";
 
 function initials(name: string, email: string): string {
@@ -25,6 +27,13 @@ export function UserProfileMenu() {
   const { status, user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  // Mirror the profile avatar in the header — shared with the profile page via
+  // React Query, so an upload/removal updates here instantly.
+  const profileQuery = useProfileQuery({ enabled: status === "authenticated" });
+  const { displayUrl: avatarUrl } = useAvatarDisplayUrl(
+    profileQuery.data?.profile_picture_url ?? null,
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -78,10 +87,20 @@ export function UserProfileMenu() {
         )}
       >
         <span
-          className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary"
+          className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-primary/10 text-xs font-bold text-primary"
           aria-hidden
         >
-          {letter}
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarUrl}
+              alt=""
+              className="size-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            letter
+          )}
         </span>
         <span className="hidden min-w-0 flex-1 flex-col leading-tight sm:flex">
           <span className="truncate text-sm font-medium text-foreground">{user.full_name}</span>
@@ -103,18 +122,15 @@ export function UserProfileMenu() {
           <p className="px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Account
           </p>
-          <button
-            type="button"
+          <Link
+            href="/profile"
             role="menuitem"
-            className={cn(menuItemClass, "text-muted-foreground")}
-            disabled
+            onClick={() => setOpen(false)}
+            className={cn(menuItemClass, "hover:bg-muted")}
           >
-            <UserRound className="size-4" aria-hidden />
-            Profile
-            <span className="ml-auto rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium">
-              Soon
-            </span>
-          </button>
+            <UserRound className="size-4 text-muted-foreground" aria-hidden />
+            Profile Settings
+          </Link>
           <button
             type="button"
             role="menuitem"
