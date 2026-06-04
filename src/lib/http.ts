@@ -16,10 +16,39 @@ export async function fetchWithTimeout(
   }
 }
 
-function messageFromErrorBody(data: ApiAuthErrorShape & { message?: string }): string | null {
+type FastApiValidationItem = {
+  loc?: unknown;
+  msg?: unknown;
+  type?: unknown;
+};
+
+function formatValidationItem(item: FastApiValidationItem): string | null {
+  if (typeof item.msg !== "string" || item.msg.length === 0) return null;
+  if (!Array.isArray(item.loc)) return item.msg;
+  const path = item.loc
+    .filter((p): p is string | number => typeof p === "string" || typeof p === "number")
+    .filter((p) => p !== "body")
+    .join(".");
+  return path ? `${path}: ${item.msg}` : item.msg;
+}
+
+function messageFromErrorBody(
+  data: ApiAuthErrorShape & { message?: string; detail?: unknown },
+): string | null {
   const nested = data.error?.message;
   if (typeof nested === "string" && nested.length > 0) return nested;
   if (typeof data.detail === "string" && data.detail.length > 0) return data.detail;
+  // FastAPI Pydantic validation errors arrive as `detail: [{ loc, msg, type }, ...]`.
+  if (Array.isArray(data.detail) && data.detail.length > 0) {
+    const messages = data.detail
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object") return formatValidationItem(item as FastApiValidationItem);
+        return null;
+      })
+      .filter((m): m is string => Boolean(m));
+    if (messages.length > 0) return messages.join("; ");
+  }
   if (typeof data.message === "string" && data.message.length > 0) return data.message;
   return null;
 }
