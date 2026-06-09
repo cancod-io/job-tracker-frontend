@@ -17,7 +17,8 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "TrackCod",
   icons: {
-    icon: "/icon.png",
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
   },
 };
 
