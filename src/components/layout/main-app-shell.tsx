@@ -7,6 +7,7 @@ import { JOBS_PATH } from "@/config/auth-routes";
 import { userPrimaryNav } from "@/config/user-nav";
 import { UserNavLink } from "@/components/layout/user-nav-link";
 import { UserProfileMenu } from "@/components/layout/user-profile-menu";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -121,6 +122,8 @@ export function MainAppShell({ children }: { children: ReactNode }) {
       >
         <div className="w-full px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 xl:px-10">{children}</div>
       </main>
+
+      <SiteFooter />
     </div>
   );
 }

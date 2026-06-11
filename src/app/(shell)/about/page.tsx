@@ -1,15 +1,25 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { type LucideIcon } from "lucide-react";
 import {
+  ArrowRight,
+  Bookmark,
+  ChevronDown,
+  ClipboardList,
   Code2,
-  Crown,
+  Compass,
+  Filter,
   Globe,
   Heart,
+  LayoutGrid,
   Quote,
   Rocket,
+  Search,
+  Sparkles,
   Star,
+  Target,
   TrendingUp,
   Trophy,
   Users,
@@ -17,9 +27,23 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-// ─── Update these values ───────────────────────────────────────────────────────
-/** First name of the birthday person shown in headline, badge, and closing card. */
-const BIRTHDAY_NAME = "Eduard"; // ← update to actual name
+// ─── Theme tokens (light + dark) ─────────────────────────────────────────────────
+// Centralized class fragments so every section stays consistent across both modes.
+const T = {
+  page: "bg-slate-50 text-slate-900 dark:bg-[#060610] dark:text-white",
+  sectionBorder: "border-slate-200 dark:border-white/[0.05]",
+  heading: "text-slate-900 dark:text-white",
+  textFaint: "text-slate-400 dark:text-white/30",
+  textMuted: "text-slate-500 dark:text-white/40",
+  textBody: "text-slate-600 dark:text-white/50",
+  textStrong: "text-slate-700 dark:text-white/70",
+  eyebrow: "bg-slate-100 text-slate-500 dark:bg-white/[0.05] dark:text-white/40",
+  chip: "bg-slate-100 text-slate-600 dark:bg-white/[0.06] dark:text-white/50",
+  card: "border border-slate-200 bg-white dark:border-white/[0.07] dark:bg-[#0d0d1c]",
+  cardSubtle: "border border-slate-200 bg-white dark:border-white/[0.06] dark:bg-white/[0.025]",
+  cardHover:
+    "hover:border-slate-300 hover:shadow-md dark:hover:border-white/[0.14] dark:hover:bg-white/[0.04] dark:hover:shadow-none",
+};
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type StatDef = { value: number; suffix: string; label: string; Icon: LucideIcon };
@@ -30,7 +54,13 @@ type MemberDef = {
   role: string;
   bio: string;
   skills: string[];
-  isBirthday: boolean;
+};
+type FeatureDef = {
+  Icon: LucideIcon;
+  title: string;
+  description: string;
+  href: string;
+  gradient: string;
 };
 type MilestoneDef = {
   date: string;
@@ -40,6 +70,8 @@ type MilestoneDef = {
   gradient: string;
 };
 type ValueDef = { Icon: LucideIcon; title: string; description: string; gradient: string };
+type StepDef = { Icon: LucideIcon; step: string; title: string; description: string };
+type FaqDef = { question: string; answer: string };
 
 // ─── Data ──────────────────────────────────────────────────────────────────────
 
@@ -50,15 +82,49 @@ const STATS: StatDef[] = [
   { value: 98, suffix: "%", label: "Uptime", Icon: Trophy },
 ];
 
+const FEATURES: FeatureDef[] = [
+  {
+    Icon: Search,
+    title: "Every job, one place",
+    description:
+      "We aggregate Shopify ecosystem roles from across the web so you never have to check five job boards again.",
+    href: "/jobs",
+    gradient: "from-violet-500 to-indigo-500",
+  },
+  {
+    Icon: Filter,
+    title: "Filter with precision",
+    description:
+      "Narrow by role, stack, seniority, and location to surface only the opportunities that actually fit you.",
+    href: "/jobs",
+    gradient: "from-blue-500 to-cyan-500",
+  },
+  {
+    Icon: LayoutGrid,
+    title: "Track every application",
+    description:
+      "Move roles through a clean Kanban board — from saved, to applied, to offer — without losing a single thread.",
+    href: "/applications",
+    gradient: "from-amber-500 to-orange-500",
+  },
+  {
+    Icon: Bookmark,
+    title: "Save for later",
+    description:
+      "Bookmark the listings that catch your eye and return when you are ready to make your move.",
+    href: "/saved",
+    gradient: "from-rose-500 to-pink-500",
+  },
+];
+
 const TEAM: MemberDef[] = [
   {
     id: 1,
     photo: "/pm.png",
-    name: BIRTHDAY_NAME, // ← update to full name
+    name: "Eduard Ferney Suarez Avella",
     role: "Product Manager & Team Lead",
-    bio: "The visionary force behind TrackCod. From the earliest whiteboard sketch to every production-ready feature, your leadership has kept the team focused, motivated, and shipping with purpose — every single sprint.",
+    bio: "The visionary force behind TrackCod. From the earliest whiteboard sketch to every production-ready feature, Eduard keeps the team focused, motivated, and shipping with purpose — every single sprint.",
     skills: ["Product Strategy", "Roadmapping", "Team Leadership"],
-    isBirthday: true,
   },
   {
     id: 2,
@@ -67,16 +133,14 @@ const TEAM: MemberDef[] = [
     role: "Product / Workflow Specialist",
     bio: "The operational backbone of the team. Kamil bridges product thinking and execution — designing the workflows and processes that keep everything running smoothly, even as complexity scales.",
     skills: ["Workflow Design", "Process Optimization", "Product Ops"],
-    isBirthday: false,
   },
   {
     id: 3,
     photo: "/QA-engineer.png",
     name: "Liam Smith",
-    role: "Devops / QA Engineer",
-    bio: "The guardian of reliability. Liam ensures every deployment is solid and every edge case is caught before it reaches users. Our CI/CD pipeline and infrastructure quality are a direct reflection of his meticulous work.",
+    role: "DevOps / QA Engineer",
+    bio: "The guardian of reliability. Liam ensures every deployment is solid and every edge case is caught before it reaches users. Our CI/CD pipeline and infrastructure quality reflect his meticulous work.",
     skills: ["DevOps", "CI/CD Pipelines", "Quality Assurance"],
-    isBirthday: false,
   },
   {
     id: 4,
@@ -85,16 +149,14 @@ const TEAM: MemberDef[] = [
     role: "Backend Lead",
     bio: "The architect of TrackCod's core systems. Liam designed and built the APIs and data infrastructure that power the platform — balancing performance, reliability, and clean design at every layer.",
     skills: ["Python", "FastAPI", "System Architecture"],
-    isBirthday: false,
   },
   {
     id: 5,
     photo: "/scraper.png",
     name: "Howard Johnson",
     role: "Senior Scraper Engineer",
-    bio: "The engine behind our data. Howard built and maintains the scraping pipelines that aggregate thousands of Shopify job listings daily — with precision, resilience, and the kind of reliability the team depends on.",
+    bio: "The engine behind our data. Howard built and maintains the scraping pipelines that aggregate thousands of Shopify job listings daily — with precision, resilience, and dependable reliability.",
     skills: ["Web Scraping", "Data Pipelines", "Automation"],
-    isBirthday: false,
   },
   {
     id: 6,
@@ -103,16 +165,7 @@ const TEAM: MemberDef[] = [
     role: "Senior Frontend Developer",
     bio: "The craftsman behind every interface. Kian turns designs into fast, accessible, and delightful user experiences — from the job listing feed to every subtle micro-interaction that makes TrackCod feel polished.",
     skills: ["Next.js", "TypeScript", "Tailwind CSS"],
-    isBirthday: false,
   },
-];
-
-const TEAM_AVATARS_FOR_HERO = [
-  "/workflow-specialist.png",
-  "/QA-engineer.png",
-  "/backend.png",
-  "/scraper.png",
-  "/frontend.png",
 ];
 
 const MILESTONES: MilestoneDef[] = [
@@ -162,7 +215,8 @@ const VALUES: ValueDef[] = [
   {
     Icon: Heart,
     title: "User-First Always",
-    description: "Every decision starts and ends with the person looking for their next Shopify role.",
+    description:
+      "Every decision starts and ends with the person looking for their next Shopify role.",
     gradient: "from-rose-500 to-pink-500",
   },
   {
@@ -176,15 +230,95 @@ const VALUES: ValueDef[] = [
     Icon: Star,
     title: "Craft at Every Layer",
     description:
-      "Speed never comes at the cost of quality. We take pride in the details no one notices — until they're missing.",
+      "Speed never comes at the cost of quality. We take pride in the details no one notices — until they are missing.",
     gradient: "from-violet-500 to-indigo-500",
+  },
+];
+
+const STEPS: StepDef[] = [
+  {
+    Icon: Compass,
+    step: "01",
+    title: "Discover",
+    description:
+      "Browse thousands of curated Shopify ecosystem roles, refreshed daily and filterable down to the exact fit.",
+  },
+  {
+    Icon: ClipboardList,
+    step: "02",
+    title: "Track",
+    description:
+      "Save the listings that matter and move each application through a clean board — from applied, to interview, to offer.",
+  },
+  {
+    Icon: Target,
+    step: "03",
+    title: "Land",
+    description:
+      "Stay organized and focused on the right opportunities, so your energy goes into landing the role — not chasing tabs.",
+  },
+];
+
+const ROLE_CATEGORIES: string[] = [
+  "Frontend Developer",
+  "Backend Engineer",
+  "Theme Developer",
+  "App Developer",
+  "Liquid Specialist",
+  "Full-Stack Engineer",
+  "Shopify Plus Developer",
+  "UI/UX Designer",
+  "Product Manager",
+  "DevOps Engineer",
+  "QA Engineer",
+  "Solutions Architect",
+  "Data Engineer",
+  "Technical Lead",
+];
+
+const TECH_STACK: string[] = [
+  "Next.js",
+  "TypeScript",
+  "React",
+  "Tailwind CSS",
+  "React Query",
+  "FastAPI",
+  "Python",
+  "PostgreSQL",
+];
+
+const FAQS: FaqDef[] = [
+  {
+    question: "Where do the job listings come from?",
+    answer:
+      "Our scraping pipelines aggregate Shopify ecosystem roles from across the web — job boards, company career pages, and community channels — then curate and de-duplicate them into a single feed.",
+  },
+  {
+    question: "How often are listings updated?",
+    answer:
+      "The pipeline runs continuously, so new roles surface daily and stale or filled positions are cleaned out automatically.",
+  },
+  {
+    question: "What kinds of roles can I find?",
+    answer:
+      "Everything across the Shopify ecosystem — from theme and Liquid development to backend engineering, app development, design, product, and DevOps. If it touches Shopify, it likely lives here.",
+  },
+  {
+    question: "Can I track my applications?",
+    answer:
+      "Yes. Save any listing and move it through a Kanban-style board so you always know exactly where each application stands.",
+  },
+  {
+    question: "Is TrackCod free to use?",
+    answer:
+      "Browsing, filtering, saving, and tracking jobs are all free. We are focused on building the most useful job-search tool for the Shopify community first.",
   },
 ];
 
 // ─── Hook ──────────────────────────────────────────────────────────────────────
 
-function useInView<T extends HTMLElement = HTMLDivElement>(threshold = 0.12) {
-  const ref = useRef<T>(null);
+function useInView<E extends HTMLElement = HTMLDivElement>(threshold = 0.12) {
+  const ref = useRef<E>(null);
   const [inView, setInView] = useState(false);
 
   useEffect(() => {
@@ -258,15 +392,39 @@ function SectionReveal({
   );
 }
 
+function SectionHeading({
+  eyebrow,
+  title,
+  subtitle,
+}: {
+  eyebrow: string;
+  title: React.ReactNode;
+  subtitle?: string;
+}) {
+  return (
+    <SectionReveal className="mb-16 text-center">
+      <div
+        className={`mb-4 inline-flex items-center gap-2 rounded-full px-3.5 py-1 text-[11px] font-bold uppercase tracking-[0.22em] ${T.eyebrow}`}
+      >
+        {eyebrow}
+      </div>
+      <h2 className={`text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl ${T.heading}`}>
+        {title}
+      </h2>
+      {subtitle && (
+        <p className={`mx-auto mt-4 max-w-xl text-[0.96rem] ${T.textMuted}`}>{subtitle}</p>
+      )}
+    </SectionReveal>
+  );
+}
+
 function TeamCard({ member, delay }: { member: MemberDef; delay: number }) {
-  const cardContent = (
-    <div
-      className={`flex h-full flex-col ${
-        member.isBirthday ? "rounded-[15px] bg-[#0c0c1a]" : "rounded-2xl"
-      }`}
-    >
-      {/* Photo area */}
-      <div className="relative overflow-hidden rounded-t-[inherit]">
+  return (
+    <SectionReveal delay={delay} className="group h-full">
+      <div
+        className={`flex h-full flex-col overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${T.card} ${T.cardHover}`}
+      >
+        {/* Photo */}
         <div className="relative h-[300px] w-full overflow-hidden">
           <Image
             src={member.photo}
@@ -275,78 +433,72 @@ function TeamCard({ member, delay }: { member: MemberDef; delay: number }) {
             className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
-          {/* gradient overlay at bottom of photo */}
-          <div
-            className={`absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t ${
-              member.isBirthday ? "from-[#0c0c1a]" : "from-[#0d0d1c]"
-            } to-transparent`}
-          />
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-white to-transparent dark:from-[#0d0d1c]" />
         </div>
 
-        {/* Birthday badge on photo */}
-        {member.isBirthday && (
-          <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/15 px-2.5 py-1 text-[11px] font-bold text-amber-300 backdrop-blur-sm">
-            <Crown className="h-3 w-3" />
-            Birthday Star
+        {/* Body */}
+        <div className="flex flex-1 flex-col px-6 pb-7 pt-4">
+          <p className={`mb-0.5 text-lg font-bold ${T.heading}`}>{member.name}</p>
+          <p className={`mb-4 text-xs font-semibold uppercase tracking-wider ${T.textMuted}`}>
+            {member.role}
+          </p>
+          <p className={`mb-5 flex-1 text-sm leading-relaxed ${T.textBody}`}>{member.bio}</p>
+
+          <div className="flex flex-wrap gap-2">
+            {member.skills.map((skill) => (
+              <span
+                key={skill}
+                className={`rounded-full px-3 py-1 text-[11px] font-medium ${T.chip}`}
+              >
+                {skill}
+              </span>
+            ))}
           </div>
-        )}
+        </div>
       </div>
+    </SectionReveal>
+  );
+}
 
-      {/* Card body */}
-      <div className="flex flex-1 flex-col px-6 pb-7 pt-4">
-        <p
-          className={`mb-0.5 font-bold text-white ${member.isBirthday ? "text-xl" : "text-lg"}`}
-        >
-          {member.name}
-        </p>
-        <p
-          className={`mb-4 text-xs font-semibold uppercase tracking-wider ${
-            member.isBirthday ? "text-amber-400/80" : "text-white/35"
+function FaqItem({
+  faq,
+  isOpen,
+  onToggle,
+}: {
+  faq: FaqDef;
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div
+      className={`overflow-hidden rounded-2xl border transition-colors duration-300 ${
+        isOpen
+          ? "border-slate-300 bg-white shadow-sm dark:border-white/[0.14] dark:bg-white/[0.045] dark:shadow-none"
+          : "border-slate-200 bg-white hover:border-slate-300 dark:border-white/[0.07] dark:bg-white/[0.025] dark:hover:border-white/[0.12]"
+      }`}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left"
+      >
+        <span className={`text-sm font-bold md:text-base ${T.heading}`}>{faq.question}</span>
+        <ChevronDown
+          className={`h-5 w-5 flex-shrink-0 text-slate-400 transition-transform duration-300 dark:text-white/40 ${
+            isOpen ? "rotate-180" : ""
           }`}
-        >
-          {member.role}
-        </p>
-        <p className="mb-5 flex-1 text-sm leading-relaxed text-white/50">{member.bio}</p>
-
-        {/* Skills */}
-        <div className="flex flex-wrap gap-2">
-          {member.skills.map((skill) => (
-            <span
-              key={skill}
-              className="rounded-full bg-white/[0.06] px-3 py-1 text-[11px] font-medium text-white/50"
-            >
-              {skill}
-            </span>
-          ))}
+        />
+      </button>
+      <div
+        className="grid transition-all duration-300 ease-out"
+        style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}
+      >
+        <div className="overflow-hidden">
+          <p className={`px-6 pb-5 text-sm leading-relaxed ${T.textBody}`}>{faq.answer}</p>
         </div>
       </div>
     </div>
-  );
-
-  if (member.isBirthday) {
-    return (
-      <SectionReveal delay={delay} className="group h-full">
-        <div
-          className="h-full rounded-2xl p-px"
-          style={{
-            background:
-              "linear-gradient(135deg, #f59e0b 0%, #ef4444 30%, #8b5cf6 60%, #06b6d4 100%)",
-            backgroundSize: "300% 300%",
-            animation: "shimmer-border 3s ease-in-out infinite, glow-pulse 3s ease-in-out infinite",
-          }}
-        >
-          {cardContent}
-        </div>
-      </SectionReveal>
-    );
-  }
-
-  return (
-    <SectionReveal delay={delay} className="group h-full">
-      <div className="h-full rounded-2xl border border-white/[0.07] bg-[#0d0d1c] transition-all duration-300 hover:border-white/[0.14] hover:bg-white/[0.04]">
-        {cardContent}
-      </div>
-    </SectionReveal>
   );
 }
 
@@ -355,6 +507,7 @@ function TeamCard({ member, delay }: { member: MemberDef; delay: number }) {
 export default function AboutPage() {
   const [mouseX, setMouseX] = useState(0);
   const [mouseY, setMouseY] = useState(0);
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -380,49 +533,42 @@ export default function AboutPage() {
     [],
   );
 
-  const confetti = useMemo(
-    () =>
-      Array.from({ length: 14 }, (_, i) => ({
-        id: i,
-        size: 4 + ((i * 1.5) % 9),
-        top: (i * 7.2) % 96,
-        left: (i * 7.9) % 96,
-        color: ["#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#10b981", "#f472b6"][i % 6],
-        opacity: 0.2 + ((i * 0.038) % 0.2),
-        duration: 4 + ((i * 0.9) % 4),
-        delay: i * 0.28,
-      })),
-    [],
-  );
-
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#060610] text-white">
-      {/* ── Ambient background orbs ─────────────────────────────────────────── */}
+    <div className={`relative min-h-screen overflow-x-hidden ${T.page}`}>
+      {/* ── Ambient background ──────────────────────────────────────────────── */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
         <div
-          className="absolute -left-56 -top-56 h-[750px] w-[750px] rounded-full bg-violet-700/20 blur-[160px]"
+          className="absolute -left-56 -top-56 h-[750px] w-[750px] rounded-full bg-violet-300/30 blur-[160px] dark:bg-violet-700/20"
           style={{ animation: "float-orb 9s ease-in-out infinite" }}
         />
         <div
-          className="absolute -right-56 top-1/3 h-[640px] w-[640px] rounded-full bg-blue-700/15 blur-[150px]"
+          className="absolute -right-56 top-1/3 h-[640px] w-[640px] rounded-full bg-blue-300/25 blur-[150px] dark:bg-blue-700/15"
           style={{ animation: "float-orb 11s ease-in-out infinite reverse" }}
         />
         <div
-          className="absolute bottom-0 left-1/4 h-[520px] w-[520px] rounded-full bg-rose-700/10 blur-[130px]"
+          className="absolute bottom-0 left-1/4 h-[520px] w-[520px] rounded-full bg-indigo-300/20 blur-[130px] dark:bg-indigo-700/10"
           style={{ animation: "float-orb 13s ease-in-out infinite 1.5s" }}
         />
         {/* Mouse-tracking glow */}
         <div
-          className="absolute h-72 w-72 rounded-full bg-amber-500/[0.06] blur-[80px]"
+          className="absolute h-72 w-72 rounded-full bg-violet-400/10 blur-[80px] dark:bg-violet-500/[0.06]"
           style={{
             left: mouseX - 144,
             top: mouseY - 144,
             transition: "left 1.1s ease-out, top 1.1s ease-out",
           }}
         />
-        {/* Subtle grid */}
+        {/* Subtle grid — dark lines for light mode, light lines for dark mode */}
         <div
-          className="absolute inset-0 opacity-[0.022]"
+          className="absolute inset-0 opacity-[0.04] dark:hidden"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(15,23,42,1) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,1) 1px, transparent 1px)",
+            backgroundSize: "56px 56px",
+          }}
+        />
+        <div
+          className="absolute inset-0 hidden opacity-[0.022] dark:block"
           style={{
             backgroundImage:
               "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
@@ -432,14 +578,14 @@ export default function AboutPage() {
       </div>
 
       <div className="relative z-10">
-        {/* ─────────────────── HERO — two-column ──────────────────────────────── */}
-        <section className="relative min-h-[calc(100vh-4rem)] overflow-hidden px-6 py-20">
+        {/* ─────────────────── HERO ───────────────────────────────────────────── */}
+        <section className="relative overflow-hidden px-6 pb-20 pt-28 md:pt-36">
           {/* Floating particles */}
           {particles.map((p) => (
             <span
               key={p.id}
               aria-hidden
-              className="pointer-events-none absolute rounded-full bg-white"
+              className="pointer-events-none absolute rounded-full bg-slate-400 dark:bg-white"
               style={{
                 width: `${p.size}px`,
                 height: `${p.size}px`,
@@ -451,181 +597,56 @@ export default function AboutPage() {
             />
           ))}
 
-          <div className="mx-auto flex min-h-[calc(100vh-10rem)] max-w-6xl flex-col items-center gap-14 md:flex-row md:gap-12 lg:gap-20">
-            {/* ── Left: PM photo ── */}
+          <div
+            className="mx-auto flex max-w-4xl flex-col items-center text-center"
+            style={{ animation: "fade-in-up 0.65s ease-out both" }}
+          >
             <div
-              className="flex w-full flex-shrink-0 flex-col items-center md:w-[42%]"
-              style={{ animation: "fade-in-up 0.65s ease-out both" }}
+              className={`mb-7 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium backdrop-blur-sm dark:border-white/10 dark:bg-white/[0.05] ${T.textStrong}`}
             >
-              {/* Outer glow ring */}
-              <div className="relative">
-                <div
-                  className="absolute inset-0 scale-105 rounded-3xl blur-2xl"
-                  style={{
-                    background:
-                      "radial-gradient(ellipse, rgba(251,191,36,0.22) 0%, rgba(239,68,68,0.1) 50%, transparent 75%)",
-                  }}
-                  aria-hidden
-                />
-
-                {/* Animated gradient border frame */}
-                <div
-                  className="relative overflow-hidden rounded-3xl p-px"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #f59e0b 0%, #ef4444 28%, #8b5cf6 60%, #06b6d4 100%)",
-                    backgroundSize: "300% 300%",
-                    animation:
-                      "shimmer-border 3s ease-in-out infinite, glow-pulse 3s ease-in-out infinite",
-                  }}
-                >
-                  <div className="relative overflow-hidden rounded-[23px]">
-                    <Image
-                      src="/pm.png"
-                      alt="Our PM & Leader"
-                      width={420}
-                      height={480}
-                      className="block w-full max-w-[340px] object-cover object-center md:max-w-none"
-                      priority
-                    />
-                    {/* Bottom overlay with label */}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0b0b18] via-[#0b0b18]/70 to-transparent pb-5 pt-20 text-center">
-                      <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-400/12 px-3 py-1.5 text-xs font-bold text-amber-300 backdrop-blur-sm">
-                        <Crown className="h-3 w-3" />
-                        PM &amp; Team Lead
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Floating sparkle dots around the photo */}
-                {[
-                  { top: "-6%", left: "-4%", size: 8, delay: "0s" },
-                  { top: "12%", right: "-6%", size: 6, delay: "0.8s" },
-                  { bottom: "20%", left: "-7%", size: 10, delay: "1.4s" },
-                  { bottom: "-4%", right: "10%", size: 7, delay: "0.4s" },
-                ].map((dot, i) => (
-                  <span
-                    key={i}
-                    aria-hidden
-                    className="pointer-events-none absolute rounded-full bg-amber-400"
-                    style={{
-                      width: dot.size,
-                      height: dot.size,
-                      top: dot.top,
-                      left: "left" in dot ? dot.left : undefined,
-                      right: "right" in dot ? dot.right : undefined,
-                      bottom: "bottom" in dot ? dot.bottom : undefined,
-                      opacity: 0.55,
-                      animation: `particle-float 4s ease-in-out infinite ${dot.delay}`,
-                    }}
-                  />
-                ))}
-              </div>
+              <Sparkles className="h-3.5 w-3.5 text-violet-500 dark:text-violet-300" />
+              About TrackCod
             </div>
 
-            {/* ── Right: Birthday message ── */}
-            <div
-              className="flex w-full flex-col items-center text-center md:items-start md:text-left"
-              style={{ animation: "fade-in-up 0.65s ease-out 0.15s both" }}
-            >
-              {/* Celebration badge */}
-              <div className="mb-7 inline-flex items-center gap-2.5 rounded-full border border-amber-400/20 bg-amber-400/[0.08] px-5 py-2 text-sm font-medium text-amber-300 backdrop-blur-sm">
-                <span aria-hidden>🎉</span>
-                <span>A Special Celebration</span>
-                <span aria-hidden>🎂</span>
-              </div>
+            <h1 className="mb-6 text-[clamp(2.6rem,6vw,5rem)] font-extrabold leading-[1.05] tracking-tight">
+              <span className="block text-slate-900 dark:text-white/90">The home for</span>
+              <span
+                className="block bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 bg-clip-text text-transparent dark:from-violet-300 dark:via-fuchsia-300 dark:to-cyan-300"
+                style={{
+                  backgroundSize: "200% auto",
+                  animation: "gradient-pan 4s linear infinite",
+                }}
+              >
+                Shopify careers
+              </span>
+            </h1>
 
-              {/* Main headline */}
-              <h1 className="mb-3 text-[clamp(2.6rem,6vw,5.2rem)] font-extrabold leading-[1.05] tracking-tight">
-                <span className="block text-white/90">Happy Birthday,</span>
-                <span
-                  className="block bg-gradient-to-r from-amber-300 via-orange-300 to-rose-300 bg-clip-text text-transparent"
-                  style={{
-                    backgroundSize: "200% auto",
-                    animation: "gradient-pan 4s linear infinite",
-                  }}
-                >
-                  {BIRTHDAY_NAME}!
-                </span>
-              </h1>
+            <p className={`mb-10 max-w-2xl text-[1.05rem] leading-loose md:text-lg ${T.textBody}`}>
+              TrackCod aggregates, curates, and tracks jobs across the entire Shopify ecosystem — so
+              developers, designers, and operators can spend their energy on what actually matters:
+              landing the right role.
+            </p>
 
-              {/* Sub-role line */}
-              <p className="mb-6 text-base font-medium text-white/40 md:text-lg">
-                To our PM &amp; Leader — from the entire TrackCod Team
-              </p>
-
-              {/* Decorative divider */}
-              <div className="mb-7 h-px w-20 bg-gradient-to-r from-amber-400/60 to-transparent" />
-
-              {/* Creative message */}
-              <blockquote className="relative mb-9">
-                <Quote
-                  className="mb-3 h-7 w-7 text-amber-400/35"
-                  aria-hidden
-                />
-                <p className="text-[1rem] leading-loose text-white/50 md:text-[1.08rem]">
-                  This project wasn&apos;t just built — it was{" "}
-                  <span className="font-semibold text-white/80">driven</span>. Every sprint, every
-                  feature, every late-night push carries your vision at its core. TrackCod exists
-                  because you believed in turning a real frustration into something the Shopify
-                  community could rely on.
-                </p>
-                <p className="mt-4 text-[1rem] leading-loose md:text-[1.08rem]">
-                  <span className="font-semibold text-amber-300/90">
-                    Today, we built this page — for you. 🚀
-                  </span>
-                </p>
-              </blockquote>
-
-              {/* Team avatar stack + signature */}
-              <div className="flex flex-col items-center gap-3 md:items-start">
-                <div className="flex items-center gap-3">
-                  <div className="flex -space-x-2.5">
-                    {TEAM_AVATARS_FOR_HERO.map((src, i) => (
-                      <div
-                        key={i}
-                        className="relative h-10 w-10 overflow-hidden rounded-full border-2 border-[#060610]"
-                      >
-                        <Image
-                          src={src}
-                          alt=""
-                          fill
-                          className="object-cover object-top"
-                          sizes="40px"
-                          aria-hidden
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-sm font-medium text-white/35">
-                    with love,{" "}
-                    <span className="font-semibold text-white/60">the TrackCod Team</span> ♥
-                  </p>
-                </div>
-              </div>
+            <div className="flex flex-col items-center gap-3 sm:flex-row">
+              <Link
+                href="/jobs"
+                className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-7 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/40"
+              >
+                Explore Jobs
+                <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+              </Link>
+              <a
+                href="#team"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-7 py-3 text-sm font-bold text-slate-700 backdrop-blur-sm transition-all duration-300 hover:border-slate-400 hover:bg-slate-50 dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 dark:hover:border-white/25 dark:hover:text-white"
+              >
+                Meet the team
+              </a>
             </div>
-          </div>
-        </section>
-
-        {/* ─────────────────── VIDEO ──────────────────────────────────────────── */}
-        <section className="py-16">
-          <div className="mx-auto max-w-4xl px-6">
-            <SectionReveal>
-              <div className="overflow-hidden rounded-3xl border border-white/[0.07] bg-white/[0.02] shadow-2xl">
-                <video
-                  src="/video.mp4"
-                  controls
-                  playsInline
-                  className="h-auto w-full"
-                />
-              </div>
-            </SectionReveal>
           </div>
         </section>
 
         {/* ─────────────────── STATS ──────────────────────────────────────────── */}
-        <section className="border-y border-white/[0.05] bg-white/[0.015] py-16">
+        <section className={`border-y bg-white/60 py-16 dark:bg-white/[0.015] ${T.sectionBorder}`}>
           <div className="mx-auto max-w-5xl px-6">
             <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
               {STATS.map((stat, i) => {
@@ -633,14 +654,18 @@ export default function AboutPage() {
                 return (
                   <SectionReveal key={stat.label} delay={i * 0.1} className="text-center">
                     <div className="mb-3 flex justify-center">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.04]">
-                        <Icon className="h-5 w-5 text-white/40" />
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 dark:border-white/[0.07] dark:bg-white/[0.04]">
+                        <Icon className="h-5 w-5 text-slate-400 dark:text-white/40" />
                       </div>
                     </div>
-                    <div className="mb-1.5 text-[2.5rem] font-extrabold leading-none tracking-tight text-white md:text-5xl">
+                    <div
+                      className={`mb-1.5 text-[2.5rem] font-extrabold leading-none tracking-tight md:text-5xl ${T.heading}`}
+                    >
                       <AnimatedCounter target={stat.value} suffix={stat.suffix} />
                     </div>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/30">
+                    <div
+                      className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${T.textFaint}`}
+                    >
                       {stat.label}
                     </div>
                   </SectionReveal>
@@ -650,48 +675,54 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* ─────────────────── MISSION ────────────────────────────────────────── */}
+        {/* ─────────────────── MISSION + VALUES ───────────────────────────────── */}
         <section className="py-28">
           <div className="mx-auto max-w-6xl px-6">
             <div className="grid gap-14 lg:grid-cols-2 lg:gap-20">
-              {/* Left */}
               <SectionReveal>
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/[0.05] px-3.5 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/40">
+                <div
+                  className={`mb-4 inline-flex items-center gap-2 rounded-full px-3.5 py-1 text-[11px] font-bold uppercase tracking-[0.22em] ${T.eyebrow}`}
+                >
                   Our Mission
                 </div>
-                <h2 className="mb-6 text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl lg:text-5xl">
+                <h2
+                  className={`mb-6 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl ${T.heading}`}
+                >
                   Built for people who{" "}
-                  <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+                  <span className="bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent dark:from-violet-400 dark:to-fuchsia-400">
                     build with Shopify
                   </span>
                 </h2>
-                <p className="mb-5 text-[0.96rem] leading-loose text-white/45">
+                <p className={`mb-5 text-[0.96rem] leading-loose ${T.textBody}`}>
                   TrackCod exists because finding great Shopify jobs shouldn&apos;t require scrolling
                   through five different job boards, a dozen LinkedIn searches, and a folder full of
                   browser bookmarks.
                 </p>
-                <p className="text-[0.96rem] leading-loose text-white/45">
+                <p className={`text-[0.96rem] leading-loose ${T.textBody}`}>
                   We built the tool we wished existed — one that aggregates, curates, and tracks
                   Shopify ecosystem jobs so developers and designers can spend their energy on what
                   actually matters: landing the right role.
                 </p>
               </SectionReveal>
 
-              {/* Right: core values */}
               <div className="flex flex-col gap-4">
                 {VALUES.map((val, i) => {
                   const Icon = val.Icon;
                   return (
                     <SectionReveal key={val.title} delay={0.1 + i * 0.1}>
-                      <div className="flex gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.05]">
+                      <div
+                        className={`flex gap-4 rounded-2xl p-5 transition-all duration-300 ${T.cardSubtle} ${T.cardHover}`}
+                      >
                         <div
                           className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${val.gradient} shadow-md`}
                         >
                           <Icon className="h-5 w-5 text-white" />
                         </div>
                         <div>
-                          <p className="mb-1 text-sm font-bold text-white">{val.title}</p>
-                          <p className="text-sm leading-relaxed text-white/45">{val.description}</p>
+                          <p className={`mb-1 text-sm font-bold ${T.heading}`}>{val.title}</p>
+                          <p className={`text-sm leading-relaxed ${T.textBody}`}>
+                            {val.description}
+                          </p>
                         </div>
                       </div>
                     </SectionReveal>
@@ -702,21 +733,117 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* ─────────────────── TEAM ───────────────────────────────────────────── */}
-        <section className="border-t border-white/[0.05] py-28">
+        {/* ─────────────────── WHAT YOU GET ───────────────────────────────────── */}
+        <section className={`border-t py-28 ${T.sectionBorder}`}>
           <div className="mx-auto max-w-6xl px-6">
-            <SectionReveal className="mb-16 text-center">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/[0.05] px-3.5 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/40">
-                The Team
+            <SectionHeading
+              eyebrow="What You Get"
+              title="Everything you need, in one place"
+              subtitle="From discovery to offer, TrackCod gives you the tools to run a focused, organized job search."
+            />
+
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {FEATURES.map((feature, i) => {
+                const Icon = feature.Icon;
+                return (
+                  <SectionReveal key={feature.title} delay={i * 0.08} className="h-full">
+                    <Link
+                      href={feature.href}
+                      className={`group flex h-full flex-col rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 ${T.cardSubtle} ${T.cardHover}`}
+                    >
+                      <div
+                        className={`mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${feature.gradient} shadow-md`}
+                      >
+                        <Icon className="h-5 w-5 text-white" />
+                      </div>
+                      <p className={`mb-2 text-base font-bold ${T.heading}`}>{feature.title}</p>
+                      <p className={`mb-5 flex-1 text-sm leading-relaxed ${T.textBody}`}>
+                        {feature.description}
+                      </p>
+                      <span
+                        className={`inline-flex items-center gap-1.5 text-xs font-semibold transition-colors group-hover:text-slate-700 dark:group-hover:text-white/70 ${T.textMuted}`}
+                      >
+                        Learn more
+                        <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5" />
+                      </span>
+                    </Link>
+                  </SectionReveal>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ─────────────────── HOW IT WORKS ───────────────────────────────────── */}
+        <section className={`border-t py-28 ${T.sectionBorder}`}>
+          <div className="mx-auto max-w-6xl px-6">
+            <SectionHeading
+              eyebrow="How It Works"
+              title="From scattered tabs to a focused search"
+              subtitle="Three simple steps take you from browsing to landing — without the chaos of a dozen open job boards."
+            />
+
+            <div className="relative grid gap-6 md:grid-cols-3">
+              {/* Connecting line (desktop) */}
+              <div className="absolute left-0 right-0 top-9 hidden h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent dark:via-white/10 md:block" />
+
+              {STEPS.map((s, i) => {
+                const Icon = s.Icon;
+                return (
+                  <SectionReveal key={s.step} delay={i * 0.12} className="relative">
+                    <div
+                      className={`flex h-full flex-col items-center rounded-2xl p-7 text-center transition-all duration-300 hover:-translate-y-1 ${T.card} ${T.cardHover}`}
+                    >
+                      <div className="relative mb-5">
+                        <div className="flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/25">
+                          <Icon className="h-7 w-7 text-white" />
+                        </div>
+                        <span className="absolute -right-1.5 -top-1.5 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-[11px] font-bold text-slate-500 dark:border-white/15 dark:bg-[#080816] dark:text-white/60">
+                          {s.step}
+                        </span>
+                      </div>
+                      <p className={`mb-2 text-lg font-bold ${T.heading}`}>{s.title}</p>
+                      <p className={`text-sm leading-relaxed ${T.textBody}`}>{s.description}</p>
+                    </div>
+                  </SectionReveal>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ─────────────────── ROLES WE COVER ─────────────────────────────────── */}
+        <section className={`border-t py-28 ${T.sectionBorder}`}>
+          <div className="mx-auto max-w-5xl px-6">
+            <SectionHeading
+              eyebrow="Roles We Cover"
+              title="The whole Shopify ecosystem"
+              subtitle="Whatever your craft, there is a place for you here — and the list keeps growing."
+            />
+
+            <SectionReveal>
+              <div className="flex flex-wrap justify-center gap-3">
+                {ROLE_CATEGORIES.map((role) => (
+                  <span
+                    key={role}
+                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-all duration-300 hover:border-violet-400 hover:bg-violet-50 hover:text-violet-700 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white/55 dark:hover:border-violet-400/40 dark:hover:bg-violet-500/[0.08] dark:hover:text-white"
+                  >
+                    {role}
+                  </span>
+                ))}
               </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-5xl">
-                Built by people who care
-              </h2>
-              <p className="mx-auto mt-4 max-w-xl text-[0.96rem] text-white/40">
-                Small by design. Every person here was chosen for their craft, their curiosity, and
-                their commitment to shipping things that actually matter.
-              </p>
             </SectionReveal>
+          </div>
+        </section>
+
+        {/* ─────────────────── TEAM ───────────────────────────────────────────── */}
+        <section id="team" className={`scroll-mt-24 border-t py-28 ${T.sectionBorder}`}>
+          <div className="mx-auto max-w-6xl px-6">
+            <SectionHeading
+              eyebrow="The Team"
+              title="Built by people who care"
+              subtitle="Small by design. Every person here was chosen for their craft, their curiosity, and their commitment to shipping things that actually matter."
+            />
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {TEAM.map((member, i) => (
@@ -727,22 +854,15 @@ export default function AboutPage() {
         </section>
 
         {/* ─────────────────── TIMELINE ───────────────────────────────────────── */}
-        <section className="border-t border-white/[0.05] py-28">
+        <section className={`border-t py-28 ${T.sectionBorder}`}>
           <div className="mx-auto max-w-4xl px-6">
-            <SectionReveal className="mb-16 text-center">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/[0.05] px-3.5 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-white/40">
-                What We&apos;ve Built
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-5xl">
-                Our story so far
-              </h2>
-            </SectionReveal>
+            <SectionHeading eyebrow="What We've Built" title="Our story so far" />
 
             <div className="relative">
               {/* Mobile vertical line */}
-              <div className="absolute left-5 top-0 h-full w-px bg-gradient-to-b from-violet-500/40 via-white/10 to-transparent md:hidden" />
+              <div className="absolute left-5 top-0 h-full w-px bg-gradient-to-b from-violet-500/40 via-slate-200 to-transparent dark:via-white/10 md:hidden" />
               {/* Desktop center line */}
-              <div className="absolute left-1/2 top-0 hidden h-full w-px -translate-x-px bg-gradient-to-b from-violet-500/40 via-white/10 to-transparent md:block" />
+              <div className="absolute left-1/2 top-0 hidden h-full w-px -translate-x-px bg-gradient-to-b from-violet-500/40 via-slate-200 to-transparent dark:via-white/10 md:block" />
 
               <div className="flex flex-col gap-10">
                 {MILESTONES.map((m, i) => {
@@ -750,12 +870,16 @@ export default function AboutPage() {
                   const isEven = i % 2 === 0;
 
                   const card = (
-                    <div className="max-w-sm rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5 transition-all duration-300 hover:border-white/[0.13] hover:bg-white/[0.055]">
-                      <span className="mb-2.5 inline-block rounded-lg bg-white/[0.06] px-2.5 py-0.5 text-[11px] font-bold text-white/45">
+                    <div
+                      className={`max-w-sm rounded-2xl p-5 transition-all duration-300 ${T.cardSubtle} ${T.cardHover}`}
+                    >
+                      <span
+                        className={`mb-2.5 inline-block rounded-lg px-2.5 py-0.5 text-[11px] font-bold ${T.chip}`}
+                      >
                         {m.date}
                       </span>
-                      <p className="mb-1.5 text-sm font-bold text-white">{m.title}</p>
-                      <p className="text-sm leading-relaxed text-white/45">{m.description}</p>
+                      <p className={`mb-1.5 text-sm font-bold ${T.heading}`}>{m.title}</p>
+                      <p className={`text-sm leading-relaxed ${T.textBody}`}>{m.description}</p>
                     </div>
                   );
 
@@ -792,73 +916,98 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* ─────────────────── BIRTHDAY CLOSER ───────────────────────────────── */}
+        {/* ─────────────────── BUILT WITH ─────────────────────────────────────── */}
+        <section className={`border-t py-24 ${T.sectionBorder}`}>
+          <div className="mx-auto max-w-4xl px-6 text-center">
+            <SectionReveal>
+              <p className={`mb-8 text-[11px] font-bold uppercase tracking-[0.22em] ${T.textFaint}`}>
+                Powered by a modern stack
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                {TECH_STACK.map((tech) => (
+                  <span
+                    key={tech}
+                    className={`rounded-xl px-4 py-2 text-sm font-semibold ${T.cardSubtle} ${T.textBody}`}
+                  >
+                    {tech}
+                  </span>
+                ))}
+              </div>
+            </SectionReveal>
+          </div>
+        </section>
+
+        {/* ─────────────────── FAQ ────────────────────────────────────────────── */}
+        <section className={`border-t py-28 ${T.sectionBorder}`}>
+          <div className="mx-auto max-w-3xl px-6">
+            <SectionHeading
+              eyebrow="FAQ"
+              title="Questions, answered"
+              subtitle="Everything you might be wondering about how TrackCod works."
+            />
+
+            <SectionReveal className="flex flex-col gap-3">
+              {FAQS.map((faq, i) => (
+                <FaqItem
+                  key={faq.question}
+                  faq={faq}
+                  isOpen={openFaq === i}
+                  onToggle={() => setOpenFaq(openFaq === i ? null : i)}
+                />
+              ))}
+            </SectionReveal>
+          </div>
+        </section>
+
+        {/* ─────────────────── CTA CLOSER ─────────────────────────────────────── */}
         <section className="pb-24 pt-8">
           <div className="mx-auto max-w-4xl px-6">
             <SectionReveal>
               <div
-                className="rounded-3xl p-px"
+                className="rounded-3xl p-px shadow-xl"
                 style={{
                   background:
-                    "linear-gradient(135deg, #f59e0b 0%, #ef4444 28%, #8b5cf6 58%, #06b6d4 100%)",
+                    "linear-gradient(135deg, #8b5cf6 0%, #d946ef 35%, #6366f1 70%, #06b6d4 100%)",
                   backgroundSize: "300% 300%",
                   animation: "shimmer-border 4s ease-in-out infinite",
                 }}
               >
-                <div className="relative overflow-hidden rounded-3xl bg-[#080816] px-8 py-20 text-center md:px-16">
-                  {/* Confetti dots */}
-                  {confetti.map((dot) => (
-                    <span
-                      key={dot.id}
-                      aria-hidden
-                      className="pointer-events-none absolute rounded-full"
-                      style={{
-                        width: `${dot.size}px`,
-                        height: `${dot.size}px`,
-                        top: `${dot.top}%`,
-                        left: `${dot.left}%`,
-                        background: dot.color,
-                        opacity: dot.opacity,
-                        animation: `particle-float ${dot.duration}s ease-in-out infinite ${dot.delay}s`,
-                      }}
-                    />
-                  ))}
-                  {/* Inner top glow */}
+                <div className="relative overflow-hidden rounded-3xl bg-white px-8 py-20 text-center dark:bg-[#080816] md:px-16">
                   <div
                     className="pointer-events-none absolute inset-0 rounded-3xl"
                     aria-hidden
                     style={{
                       background:
-                        "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(251,191,36,0.1) 0%, transparent 70%)",
+                        "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(139,92,246,0.12) 0%, transparent 70%)",
                     }}
                   />
 
                   <div className="relative z-10">
-                    <span className="mb-5 block text-6xl" role="img" aria-label="Birthday cake">
-                      🎂
-                    </span>
-                    <h2 className="mb-5 text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl">
-                      Happy Birthday,{" "}
-                      <span className="bg-gradient-to-r from-amber-300 via-orange-300 to-rose-300 bg-clip-text text-transparent">
-                        {BIRTHDAY_NAME}!
+                    <div
+                      className={`mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold backdrop-blur-sm dark:border-white/10 dark:bg-white/[0.05] ${T.textStrong}`}
+                    >
+                      <Quote className="h-3.5 w-3.5 text-violet-500 dark:text-violet-300" />
+                      Your next role is waiting
+                    </div>
+                    <h2
+                      className={`mb-5 text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl ${T.heading}`}
+                    >
+                      Ready to find your{" "}
+                      <span className="bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 bg-clip-text text-transparent dark:from-violet-300 dark:via-fuchsia-300 dark:to-cyan-300">
+                        next Shopify role?
                       </span>
                     </h2>
-                    <p className="mx-auto mb-4 max-w-2xl text-base leading-loose text-white/55 md:text-lg">
-                      From the first conversation that sparked this idea, to every late-night standup,
-                      every feature shipped, every blocker cleared — your leadership and vision have
-                      been the foundation everything else is built on.
+                    <p className={`mx-auto mb-10 max-w-2xl text-base leading-loose md:text-lg ${T.textBody}`}>
+                      Thousands of curated Shopify ecosystem jobs, smart filtering, and a tracker to
+                      keep every application organized — all in one place.
                     </p>
-                    <p className="mx-auto max-w-xl text-base leading-loose text-white/55 md:text-lg">
-                      Here&apos;s to another year of building great things together.{" "}
-                      <span className="font-semibold text-amber-300/90">
-                        Thank you for everything.
-                      </span>{" "}
-                      🚀
-                    </p>
-                    <div className="mt-10 flex items-center justify-center gap-2 text-sm font-medium text-white/30">
-                      <span>With appreciation,</span>
-                      <span className="font-semibold text-white/55">the TrackCod Team</span>
-                    </div>
+                    <Link
+                      href="/jobs"
+                      className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/40"
+                    >
+                      Browse Jobs Now
+                      <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+                    </Link>
                   </div>
                 </div>
               </div>
