@@ -1,7 +1,9 @@
 import { Bookmark, ExternalLink, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { companyInitials } from "@/lib/company-utils";
+import { JobApplyButton } from "@/components/jobs/job-apply-button";
 import { TrackedStatusBadge } from "@/components/jobs/tracked-status-badge";
+import { JobNewBadge } from "@/components/jobs/job-new-badge";
 import type { TrackedInfo, JobsViewMode } from "@/components/jobs/types";
 import type { Job } from "@/types/job";
 
@@ -96,6 +98,7 @@ export function JobCard({
               <h4 className="truncate text-[13px] font-semibold leading-snug text-foreground">
                 {job.title}
               </h4>
+              {job.isNew ? <JobNewBadge /> : null}
               <span className="shrink-0 text-[11px] text-muted-foreground">{job.datePosted}</span>
             </div>
             <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-px text-xs text-muted-foreground">
@@ -154,14 +157,11 @@ export function JobCard({
                 className="h-8 px-2.5 text-[11px]"
               />
             ) : (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onApplyClick(job); }}
+              <JobApplyButton
+                job={job}
+                onApplyClick={onApplyClick}
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-[11px] font-semibold text-primary-foreground transition-[opacity,transform] hover:opacity-90 active:scale-[0.97]"
-                aria-label={`Apply to ${job.title} at ${job.company}`}
-              >
-                Apply <ExternalLink className="size-3.5 shrink-0" aria-hidden />
-              </button>
+              />
             )}
             <button
               type="button"
@@ -206,9 +206,12 @@ export function JobCard({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
-              <h4 className="line-clamp-2 text-[15px] leading-snug tracking-tight text-foreground">
-                {job.title}
-              </h4>
+              <div className="flex min-w-0 flex-1 items-start gap-2">
+                <h4 className="line-clamp-2 text-[15px] leading-snug tracking-tight text-foreground">
+                  {job.title}
+                </h4>
+                {job.isNew ? <JobNewBadge className="mt-0.5" /> : null}
+              </div>
               <span className="shrink-0 tabular-nums text-[11px] font-medium text-muted-foreground">
                 {job.datePosted}
               </span>
@@ -289,14 +292,11 @@ export function JobCard({
             </a>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onApplyClick(job); }}
+          <JobApplyButton
+            job={job}
+            onApplyClick={onApplyClick}
             className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm transition-[transform,background-color] hover:opacity-90 active:scale-[0.98]"
-            aria-label={`Apply to ${job.title} at ${job.company}`}
-          >
-            Apply <ExternalLink className="size-3.5 shrink-0" aria-hidden />
-          </button>
+          />
         )}
         <button
           type="button"

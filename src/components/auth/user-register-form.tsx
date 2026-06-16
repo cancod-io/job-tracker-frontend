@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
-import { JOBS_PATH, LOGIN_PATH } from "@/config/auth-routes";
+import { JOBS_PATH, LOGIN_PATH, verifyEmailHref } from "@/config/auth-routes";
 import {
   MIN_PASSWORD_LENGTH,
   PasswordFieldsGroup,
@@ -24,7 +24,7 @@ function UserRegisterFormInner() {
   const [confirm, setConfirm] = useState("");
   const [showPasswordErrors, setShowPasswordErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [pendingApprovalEmail, setPendingApprovalEmail] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -46,8 +46,13 @@ function UserRegisterFormInner() {
     setSubmitting(true);
     try {
       const result = await register({ email, full_name: fullName.trim(), password });
+      if (result.status === "verify_email") {
+        notify.success("Check your email for a verification code.");
+        router.push(verifyEmailHref(result.email));
+        return;
+      }
       if (result.status === "pending") {
-        setPendingEmail(result.email);
+        setPendingApprovalEmail(result.email);
         return;
       }
       router.replace(nextPath.startsWith("/") ? nextPath : `/${nextPath}`);
@@ -58,14 +63,14 @@ function UserRegisterFormInner() {
     }
   }
 
-  if (pendingEmail) {
+  if (pendingApprovalEmail) {
     return (
       <div className="mx-auto w-full max-w-md space-y-8 py-8">
         <div className="text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Almost there</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Your account ({pendingEmail}) is waiting for administrator approval. You will be able to
-            sign in after an admin approves your registration.
+            Your account ({pendingApprovalEmail}) is waiting for administrator approval. You will
+            be able to sign in after an admin approves your registration.
           </p>
         </div>
         <div className="rounded-2xl border border-amber-500/35 bg-amber-500/10 p-6 text-sm text-amber-950 dark:text-amber-100 md:p-8">

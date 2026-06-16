@@ -166,6 +166,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(message);
       }
       const created = (await res.json()) as AuthUser;
+      if (!created.email_verified) {
+        return { status: "verify_email", email: payload.email };
+      }
       if (created.approval_status === "pending") {
         return { status: "pending", email: payload.email };
       }

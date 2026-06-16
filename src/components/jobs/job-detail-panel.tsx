@@ -13,7 +13,9 @@ import { cn } from "@/lib/utils";
 import { jobAtsStatusBadgeClass, jobAtsStatusLabel } from "@/lib/application-status-badge";
 import { copyTextToClipboard } from "@/lib/copy-to-clipboard";
 import { notify } from "@/lib/notify";
+import { JobApplyButton } from "@/components/jobs/job-apply-button";
 import { TrackedStatusBadge } from "@/components/jobs/tracked-status-badge";
+import { JobNewBadge } from "@/components/jobs/job-new-badge";
 import type { TrackedInfo } from "@/components/jobs/types";
 import type { Job, JobAtsStatus } from "@/types/job";
 import type { ApiApplicationStatus } from "@/types/application";
@@ -143,6 +145,7 @@ export function JobDetailPanel({ job, onClose, trackedInfo, onApplyClick }: JobD
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 md:px-5 md:py-5">
         {/* Badges row */}
         <div className="flex flex-wrap gap-2">
+          {job.isNew ? <JobNewBadge className="text-xs" /> : null}
           {job.salary ? (
             <span className="inline-flex items-center rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground">
               {job.salary}
@@ -160,7 +163,7 @@ export function JobDetailPanel({ job, onClose, trackedInfo, onApplyClick }: JobD
           ) : null}
           {trackedInfo ? (
             <TrackedStatusBadge status={trackedInfo.status} variant="pill" />
-          ) : (
+          ) : job.isNew && job.atsStatus === "new" ? null : (
             <span
               className={cn(
                 "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium",
@@ -235,20 +238,20 @@ export function JobDetailPanel({ job, onClose, trackedInfo, onApplyClick }: JobD
             className="h-10 min-h-10 flex-1 px-4 text-sm md:flex-initial"
           />
         ) : (
-          <button
-            type="button"
+          <JobApplyButton
+            job={job}
+            onApplyClick={onApplyClick}
             disabled={applyBlocked}
-            onClick={() => onApplyClick(job)}
-            className={applyPrimaryBtnClass}
-            aria-label={
+            label={
               applyBlocked
                 ? `Apply unavailable — status is ${jobAtsStatusLabel(job.atsStatus)}`
                 : `Apply to ${job.title} at ${job.company}`
             }
+            className={applyPrimaryBtnClass}
           >
             Apply now
             <ExternalLink className="size-4 shrink-0" aria-hidden />
-          </button>
+          </JobApplyButton>
         )}
         {trackedInfo && hasApplyUrl ? (
           <a

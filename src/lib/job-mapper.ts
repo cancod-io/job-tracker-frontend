@@ -92,6 +92,7 @@ export function mapApiJobListItemToJob(item: ApiJobListItem): Job {
     isRemote: Boolean(item.is_remote),
     applyUrl: item.apply_url?.trim() || "#",
     atsStatus: normalizeAtsStatusFromApi(item.ats_status),
+    isNew: Boolean(item.is_new),
     saved: false,
     salary: item.salary?.trim() || null,
     description: (item.description ?? "").trim(),

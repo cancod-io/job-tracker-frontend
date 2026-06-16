@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
-import { JOBS_PATH, REGISTER_PATH } from "@/config/auth-routes";
+import { JOBS_PATH, REGISTER_PATH, verifyEmailHref } from "@/config/auth-routes";
 import { isLoginAuthError, LOGIN_ERROR_CODES, type LoginField } from "@/lib/auth-errors";
 import { notify } from "@/lib/notify";
 import { useAuth } from "@/providers/auth-provider";
@@ -33,7 +33,7 @@ function notifyLoginFailure(err: unknown, setInvalidFields: (v: InvalidFields) =
     const code = err.code ?? null;
     if (code === LOGIN_ERROR_CODES.PENDING_APPROVAL) {
       notify.warning(err.message);
-    } else {
+    } else if (code !== LOGIN_ERROR_CODES.EMAIL_NOT_VERIFIED) {
       notify.error(err.message);
     }
     return;
@@ -93,6 +93,11 @@ function UserLoginFormInner() {
       await login(email.trim(), password);
       router.replace(nextPath.startsWith("/") ? nextPath : `/${nextPath}`);
     } catch (err) {
+      if (isLoginAuthError(err) && err.code === LOGIN_ERROR_CODES.EMAIL_NOT_VERIFIED) {
+        notify.info("Verify your email before signing in.");
+        router.push(verifyEmailHref(email.trim()));
+        return;
+      }
       notifyLoginFailure(err, setInvalidFields);
     } finally {
       setSubmitting(false);
