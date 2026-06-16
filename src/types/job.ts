@@ -28,6 +28,8 @@ export type Job = {
   isRemote: boolean;
   applyUrl: string;
   atsStatus: JobAtsStatus;
+  /** From API `is_new` — recently discovered listing. */
+  isNew: boolean;
   saved: boolean;
   salary: string | null;
   /** Full description for detail panel; card uses clamped excerpt. */

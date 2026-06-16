@@ -36,6 +36,8 @@ export type ApiJobListItem = {
   created_at?: string;
   raw_payload?: ApiJobRawPayload | null;
   is_active?: boolean;
+  /** True when the listing was recently discovered — show a "New" badge on cards. */
+  is_new?: boolean;
 };
 
 export type ApiJobListResponse = {

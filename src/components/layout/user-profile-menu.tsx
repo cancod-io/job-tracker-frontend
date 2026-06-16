@@ -131,7 +131,7 @@ export function UserProfileMenu() {
             <UserRound className="size-4 text-muted-foreground" aria-hidden />
             Profile Settings
           </Link>
-          <button
+          {/* <button
             type="button"
             role="menuitem"
             className={cn(menuItemClass, "text-muted-foreground")}
@@ -142,7 +142,7 @@ export function UserProfileMenu() {
             <span className="ml-auto rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium">
               Soon
             </span>
-          </button>
+          </button> */}
           <div className="my-1 border-t border-border" />
           <button
             type="button"

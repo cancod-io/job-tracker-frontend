@@ -25,7 +25,19 @@ export const LOGIN_ERROR_CODES = {
   INCORRECT_PASSWORD: "INCORRECT_PASSWORD",
   PENDING_APPROVAL: "PENDING_APPROVAL",
   ACCOUNT_REJECTED: "ACCOUNT_REJECTED",
+  EMAIL_NOT_VERIFIED: "EMAIL_NOT_VERIFIED",
 } as const;
+
+/** Known verification error codes from verify/resend endpoints. */
+export const VERIFICATION_ERROR_CODES = {
+  INVALID_VERIFICATION_CODE: "INVALID_VERIFICATION_CODE",
+  VERIFICATION_CODE_EXPIRED: "VERIFICATION_CODE_EXPIRED",
+  VERIFICATION_CODE_ATTEMPTS_EXCEEDED: "VERIFICATION_CODE_ATTEMPTS_EXCEEDED",
+  VERIFICATION_CODE_THROTTLED: "VERIFICATION_CODE_THROTTLED",
+} as const;
+
+export type VerificationErrorCode =
+  (typeof VERIFICATION_ERROR_CODES)[keyof typeof VERIFICATION_ERROR_CODES];
 
 export type LoginErrorCode = (typeof LOGIN_ERROR_CODES)[keyof typeof LOGIN_ERROR_CODES];
 
@@ -86,8 +98,41 @@ function fieldsFromCodeAndDetails(
 
 export function isFormLevelLoginCode(code: string | null): boolean {
   return (
-    code === LOGIN_ERROR_CODES.PENDING_APPROVAL || code === LOGIN_ERROR_CODES.ACCOUNT_REJECTED
+    code === LOGIN_ERROR_CODES.PENDING_APPROVAL ||
+    code === LOGIN_ERROR_CODES.ACCOUNT_REJECTED ||
+    code === LOGIN_ERROR_CODES.EMAIL_NOT_VERIFIED
   );
+}
+
+export type VerificationAuthError = Error & {
+  code?: VerificationErrorCode | string | null;
+};
+
+export type ResolvedVerificationError = {
+  message: string;
+  code: VerificationErrorCode | string | null;
+};
+
+export function resolveVerificationError(
+  data: ApiAuthErrorShape,
+  fallback = "Verification failed",
+): ResolvedVerificationError {
+  const code = apiErrorCode(data);
+  const message =
+    apiErrorMessage(data) ?? (typeof data.detail === "string" ? data.detail : fallback);
+  return { message, code };
+}
+
+export function createVerificationAuthError(
+  resolved: ResolvedVerificationError,
+): VerificationAuthError {
+  const err = new Error(resolved.message) as VerificationAuthError;
+  err.code = resolved.code;
+  return err;
+}
+
+export function isVerificationAuthError(err: unknown): err is VerificationAuthError {
+  return err instanceof Error && "code" in err;
 }
 
 /** Map login API JSON to message + code + target field(s). Prefer API `message`; branch on `code`. */

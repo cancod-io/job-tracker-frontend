@@ -240,7 +240,6 @@ console.log(jobsQuery.data)
     pendingApplyJobs,
     confirmingIds,
     handleApplyClick,
-    handleApplyAndTrackDirectly,
     handleConfirmApply,
     dismissPending,
   } = useApplyFlow();
@@ -361,7 +360,7 @@ console.log(jobsQuery.data)
                 job={detailJob}
                 onClose={closeDetail}
                 trackedInfo={trackedJobsMap.get(Number(detailJob.id))}
-                onApplyClick={(job) => void handleApplyAndTrackDirectly(job)}
+                onApplyClick={handleApplyClick}
               />
             </div>
           </div>
