@@ -19,6 +19,8 @@ export type ApiJobListItem = {
   /** Legacy / alternate title field. */
   title?: string;
   company: string;
+  /** Upstream scrape / ingest source (e.g. `google_jobs`, `linkedin`). */
+  source?: string | null;
   location?: string | null;
   salary?: string | null;
   is_remote?: boolean;
@@ -103,10 +105,16 @@ export type FetchJobsListParams = {
   limit?: number;
   offset?: number;
   sort_by?: ApiJobsSortBy;
+  /** Exact match on scraper/source name; omit for all sources. */
+  source?: string;
   include_inactive?: boolean;
   include_duplicates?: boolean;
   q?: string;
   title?: string;
   company?: string;
   location?: string;
+};
+
+export type ApiJobSourcesResponse = {
+  sources: string[];
 };

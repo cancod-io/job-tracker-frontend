@@ -79,6 +79,7 @@ export function mapApiJobListItemToJob(item: ApiJobListItem): Job {
     id: String(item.id),
     title: apiTitle(item),
     company: item.company?.trim() || "—",
+    source: item.source?.trim() || null,
     logoUrl: item.company_logo_url?.trim() || null,
     datePosted: buildPostedLabel(item),
     sortPostedAtMs: postedAtSortMilliseconds(item),

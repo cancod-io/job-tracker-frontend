@@ -6,6 +6,7 @@ import {
   parsePageFromSearchParams,
   parsePerPageFromSearchParams,
   parseSortByFromSearchParams,
+  parseSourceFromSearchParams,
   type PageSizeOption,
 } from "@/components/jobs/types";
 import type { ApiJobsSortBy } from "@/types/api-jobs";
@@ -13,13 +14,14 @@ import type { ApiJobsSortBy } from "@/types/api-jobs";
 export type JobsListUrlState = {
   page: number;
   sortBy: ApiJobsSortBy;
+  source: string;
   perPage: PageSizeOption;
   /** Stable serialized form of the URL params — safe to use as a dep key. */
   searchParamsKey: string;
 };
 
 /**
- * Reads page, sort_by, and per_page from the URL in a single allocation,
+ * Reads page, sort_by, source, and per_page from the URL in a single allocation,
  * memoized against the serialized search-params string.
  */
 export function useJobsListUrlState(): JobsListUrlState {
@@ -30,6 +32,7 @@ export function useJobsListUrlState(): JobsListUrlState {
     return {
       page: parsePageFromSearchParams(sp),
       sortBy: parseSortByFromSearchParams(sp),
+      source: parseSourceFromSearchParams(sp),
       perPage: parsePerPageFromSearchParams(sp),
       searchParamsKey,
     };

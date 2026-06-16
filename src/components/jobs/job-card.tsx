@@ -4,6 +4,7 @@ import { companyInitials } from "@/lib/company-utils";
 import { JobApplyButton } from "@/components/jobs/job-apply-button";
 import { TrackedStatusBadge } from "@/components/jobs/tracked-status-badge";
 import { JobNewBadge } from "@/components/jobs/job-new-badge";
+import { JobSourceBadge } from "@/components/jobs/job-source-badge";
 import type { TrackedInfo, JobsViewMode } from "@/components/jobs/types";
 import type { Job } from "@/types/job";
 
@@ -133,6 +134,7 @@ export function JobCard({
                   {job.experienceLevel}
                 </span>
               ) : null}
+              {job.source ? <JobSourceBadge source={job.source} /> : null}
               {trackedInfo ? (
                 <TrackedStatusBadge
                   status={trackedInfo.status}
@@ -228,6 +230,7 @@ export function JobCard({
           {trackedInfo ? (
             <TrackedStatusBadge status={trackedInfo.status} variant="pill" />
           ) : null}
+          {job.source ? <JobSourceBadge source={job.source} /> : null}
           {job.salary ? (
             <span className={cn(badgeOutline, "text-foreground")}>{job.salary}</span>
           ) : null}
