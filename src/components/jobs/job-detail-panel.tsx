@@ -16,6 +16,7 @@ import { notify } from "@/lib/notify";
 import { JobApplyButton } from "@/components/jobs/job-apply-button";
 import { TrackedStatusBadge } from "@/components/jobs/tracked-status-badge";
 import { JobNewBadge } from "@/components/jobs/job-new-badge";
+import { JobSourceBadge } from "@/components/jobs/job-source-badge";
 import type { TrackedInfo } from "@/components/jobs/types";
 import type { Job, JobAtsStatus } from "@/types/job";
 import type { ApiApplicationStatus } from "@/types/application";
@@ -146,6 +147,9 @@ export function JobDetailPanel({ job, onClose, trackedInfo, onApplyClick }: JobD
         {/* Badges row */}
         <div className="flex flex-wrap gap-2">
           {job.isNew ? <JobNewBadge className="text-xs" /> : null}
+          {job.source ? (
+            <JobSourceBadge source={job.source} className="px-2.5 py-1 text-xs" />
+          ) : null}
           {job.salary ? (
             <span className="inline-flex items-center rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground">
               {job.salary}

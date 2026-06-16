@@ -9,6 +9,7 @@ import { useJobFiltersStore } from "@/store/job-filters";
 import { useApplicationsStore } from "@/store/applications-store";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useJobsListQuery } from "@/hooks/use-jobs-list-query";
+import { useJobSourcesQuery } from "@/hooks/use-job-sources-query";
 import { useJobsListUrlState } from "@/hooks/use-jobs-list-url-state";
 import { useSlideOverPanel } from "@/hooks/use-slide-over-panel";
 import { useApplyFlow } from "@/hooks/use-apply-flow";
@@ -63,14 +64,19 @@ function matchesClientFilters(
 
 function renderEmptyStateMessage(args: {
   query: string;
+  source: string;
   hasClientFilters: boolean;
   total: number;
   pageJobs: number;
 }): string {
   const trimmed = args.query.trim();
+  const sourceLabel = args.source.trim();
   // Search returned zero hits from the server.
   if (trimmed && args.total === 0) {
     return `No jobs match “${trimmed}”. Try a different keyword or clear the search.`;
+  }
+  if (sourceLabel && args.total === 0) {
+    return `No jobs from this source. Try “All sources” or pick another filter.`;
   }
   // The server page had results but client-side filters (experience / job type) hid them all.
   if (args.pageJobs > 0 && args.hasClientFilters) {
@@ -104,7 +110,14 @@ export function JobsList() {
   const pathname = usePathname();
 
   // ── URL state ─────────────────────────────────────────────────────────────
-  const { page, sortBy, perPage, searchParamsKey } = useJobsListUrlState();
+  const { page, sortBy, source, perPage, searchParamsKey } = useJobsListUrlState();
+
+  const jobSourcesQuery = useJobSourcesQuery();
+  const sourceOptions = useMemo(() => {
+    const list = jobSourcesQuery.data ?? [];
+    if (source && !list.includes(source)) return [source, ...list];
+    return list;
+  }, [jobSourcesQuery.data, source]);
 
   // ── Client filter store (selector-sliced to avoid extra re-renders) ───────
   const experience = useJobFiltersStore((s) => s.experience);
@@ -132,26 +145,30 @@ export function JobsList() {
   const prevDebouncedQueryRef = useRef(debouncedQuery);
   const prevExperienceRef = useRef(experience);
   const prevJobTypeRef = useRef(jobType);
+  const prevSourceRef = useRef(source);
   useEffect(() => {
     const queryChanged = prevDebouncedQueryRef.current !== debouncedQuery;
     const experienceChanged = prevExperienceRef.current !== experience;
     const jobTypeChanged = prevJobTypeRef.current !== jobType;
+    const sourceChanged = prevSourceRef.current !== source;
     prevDebouncedQueryRef.current = debouncedQuery;
     prevExperienceRef.current = experience;
     prevJobTypeRef.current = jobType;
+    prevSourceRef.current = source;
 
-    if (!queryChanged && !experienceChanged && !jobTypeChanged) return;
+    if (!queryChanged && !experienceChanged && !jobTypeChanged && !sourceChanged) return;
     if (page <= 1) return;
 
     const sp = new URLSearchParams(searchParamsKey);
     router.replace(buildJobsListHref(pathname, sp, { page: 1 }), { scroll: false });
-  }, [debouncedQuery, experience, jobType, page, pathname, router, searchParamsKey]);
+  }, [debouncedQuery, experience, jobType, source, page, pathname, router, searchParamsKey]);
 
   // ── Fetch jobs ────────────────────────────────────────────────────────────
   const jobsQuery = useJobsListQuery({
     page,
     perPage,
     sortBy,
+    source,
     query: debouncedQuery,
   });
   const total = jobsQuery.data?.total ?? 0;
@@ -159,7 +176,6 @@ export function JobsList() {
   const isRefreshing = jobsQuery.isFetching && !jobsQuery.isPending;
   const showCardSkeletons = loading || isRefreshing;
   const jobs = useMemo(() => jobsQuery.data?.jobs ?? [], [jobsQuery.data]);
-console.log(jobsQuery.data)
   useEffect(() => {
     if (!jobsQuery.error) return;
     notify.error(jobsQuery.error instanceof Error ? jobsQuery.error.message : "Could not load jobs.");
@@ -207,6 +223,7 @@ console.log(jobsQuery.data)
     (patch: {
       page?: number;
       sortBy?: ApiJobsSortBy;
+      source?: string;
       perPage?: PageSizeOption;
     }) => {
       scrollToPageTop();
@@ -233,7 +250,7 @@ console.log(jobsQuery.data)
     // Identity of `closeDetail` & `visibleJobs` would re-fire this on every render;
     // we only want to fire on the inputs that change the result set.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedQuery, page, perPage, sortBy, experience, jobType]);
+  }, [debouncedQuery, page, perPage, sortBy, source, experience, jobType]);
 
   // ── Apply flow ────────────────────────────────────────────────────────────
   const {
@@ -267,6 +284,10 @@ console.log(jobsQuery.data)
         onViewModeChange={setViewMode}
         sortBy={sortBy}
         onSortByChange={(next) => navigateList({ sortBy: next, page: 1 })}
+        source={source}
+        onSourceChange={(next) => navigateList({ source: next, page: 1 })}
+        sourceOptions={sourceOptions}
+        sourcesLoading={jobSourcesQuery.isPending}
       />
 
       <JobsPagination placement="top" {...sharedPaginationProps} />
@@ -308,6 +329,7 @@ console.log(jobsQuery.data)
           >
             {renderEmptyStateMessage({
               query: debouncedQuery,
+              source,
               hasClientFilters: experience !== "All" || jobType !== "All",
               total,
               pageJobs: jobs.length,

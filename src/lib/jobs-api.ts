@@ -1,6 +1,6 @@
 import { authRequestHeaders } from "@/lib/auth-token";
 import { assertOkResponse, fetchWithTimeout } from "@/lib/http";
-import type { ApiJobListResponse, FetchJobsListParams } from "@/types/api-jobs";
+import type { ApiJobListResponse, ApiJobSourcesResponse, FetchJobsListParams } from "@/types/api-jobs";
 
 function appendJobsQueryParams(search: URLSearchParams, params: FetchJobsListParams): void {
   const limit = params.limit ?? 20;
@@ -11,6 +11,9 @@ function appendJobsQueryParams(search: URLSearchParams, params: FetchJobsListPar
   search.set("include_inactive", String(params.include_inactive ?? false));
   search.set("include_duplicates", String(params.include_duplicates ?? false));
 
+  const source = params.source?.trim();
+  if (source) search.set("source", source);
+
   const q = params.q?.trim();
   if (q) search.set("q", q);
   const title = params.title?.trim();
@@ -19,6 +22,18 @@ function appendJobsQueryParams(search: URLSearchParams, params: FetchJobsListPar
   if (company) search.set("company", company);
   const location = params.location?.trim();
   if (location) search.set("location", location);
+}
+
+export async function fetchJobSources(): Promise<string[]> {
+  const res = await fetchWithTimeout("/api/v1/jobs/sources", {
+    headers: authRequestHeaders(),
+    credentials: "omit",
+  });
+
+  await assertOkResponse(res, "Could not load job sources.");
+
+  const data = (await res.json()) as ApiJobSourcesResponse;
+  return (data.sources ?? []).map((s) => String(s).trim()).filter(Boolean);
 }
 
 export async function fetchJobsList(params: FetchJobsListParams = {}): Promise<ApiJobListResponse> {

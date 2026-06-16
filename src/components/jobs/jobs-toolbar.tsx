@@ -3,6 +3,8 @@
 import { LayoutGrid, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SearchInput } from "@/components/ui/search-input";
+import { formatJobSourceLabel } from "@/components/jobs/job-source-badge";
+import { ALL_JOB_SOURCES_VALUE } from "@/components/jobs/types";
 import { API_JOBS_SORT_BY, jobsSortByLabel } from "@/types/api-jobs";
 import type { JobsViewMode } from "@/components/jobs/types";
 import type { ApiJobsSortBy } from "@/types/api-jobs";
@@ -15,10 +17,14 @@ type JobsToolbarProps = {
   onViewModeChange: (mode: JobsViewMode) => void;
   sortBy: ApiJobsSortBy;
   onSortByChange: (sortBy: ApiJobsSortBy) => void;
+  source: string;
+  onSourceChange: (source: string) => void;
+  sourceOptions: string[];
+  sourcesLoading?: boolean;
 };
 
 /**
- * Toolbar above the jobs list: search, sort_by, and view-mode toggle.
+ * Toolbar above the jobs list: search, source filter, sort_by, and view-mode toggle.
  */
 export function JobsToolbar({
   total,
@@ -27,6 +33,10 @@ export function JobsToolbar({
   onViewModeChange,
   sortBy,
   onSortByChange,
+  source,
+  onSourceChange,
+  sourceOptions,
+  sourcesLoading = false,
 }: JobsToolbarProps) {
   const { query, setQuery } = useJobFiltersStore();
 
@@ -58,6 +68,27 @@ export function JobsToolbar({
           aria-label="Search jobs"
           className="w-full sm:w-64"
         />
+
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <label htmlFor="jobs-source-filter" className="sr-only">
+            Filter by source
+          </label>
+          <select
+            id="jobs-source-filter"
+            value={source}
+            onChange={(e) => onSourceChange(e.target.value)}
+            disabled={sourcesLoading}
+            className="form-control h-10 min-w-[10.5rem] cursor-pointer rounded-xl text-sm shadow-sm sm:min-w-[12rem] disabled:cursor-wait disabled:opacity-70"
+            aria-label="Filter jobs by source"
+          >
+            <option value={ALL_JOB_SOURCES_VALUE}>All sources</option>
+            {sourceOptions.map((value) => (
+              <option key={value} value={value}>
+                {formatJobSourceLabel(value)}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div className="flex min-w-0 flex-col gap-1.5">
           <label htmlFor="jobs-sort-by" className="sr-only">

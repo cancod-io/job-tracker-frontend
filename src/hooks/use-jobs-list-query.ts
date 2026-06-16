@@ -10,6 +10,7 @@ type UseJobsListQueryParams = {
   page: number;
   perPage: number;
   sortBy: ApiJobsSortBy;
+  source: string;
   query: string;
 };
 
@@ -22,10 +23,11 @@ export function useJobsListQuery({
   page,
   perPage,
   sortBy,
+  source,
   query,
 }: UseJobsListQueryParams) {
   return useQuery<JobsListQueryData>({
-    queryKey: ["jobs-list", page, perPage, sortBy, query],
+    queryKey: ["jobs-list", page, perPage, sortBy, source, query],
     placeholderData: keepPreviousData,
     queryFn: async () => {
       const offset = (page - 1) * perPage;
@@ -33,6 +35,7 @@ export function useJobsListQuery({
         limit: perPage,
         offset,
         sort_by: sortBy,
+        source: source.trim() || undefined,
         include_inactive: false,
         include_duplicates: false,
         q: query.trim() || undefined,

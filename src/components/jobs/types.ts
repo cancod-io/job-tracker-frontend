@@ -48,7 +48,11 @@ export const TRACKED_STATUS_BADGE: Record<
 
 export const URL_PAGE_KEY = "page";
 export const URL_SORT_BY_KEY = "sort_by";
+export const URL_SOURCE_KEY = "source";
 export const URL_PER_PAGE_KEY = "per_page";
+
+/** Dropdown value when no `source` query param is sent to the API. */
+export const ALL_JOB_SOURCES_VALUE = "";
 
 // ─── Detail panel ──────────────────────────────────────────────────────────
 
@@ -112,18 +116,26 @@ export function parseSortByFromSearchParams(sp: URLSearchParams): ApiJobsSortBy 
   return DEFAULT_JOBS_SORT_BY;
 }
 
+/** Selected source filter; empty string means all sources (no API param). */
+export function parseSourceFromSearchParams(sp: URLSearchParams): string {
+  return sp.get(URL_SOURCE_KEY)?.trim() ?? ALL_JOB_SOURCES_VALUE;
+}
+
 export function buildJobsListHref(
   pathname: string,
   base: URLSearchParams,
   patch: {
     page?: number;
     sortBy?: ApiJobsSortBy;
+    source?: string;
     perPage?: PageSizeOption;
   },
 ): string {
   const params = new URLSearchParams(base.toString());
   const page = patch.page ?? parsePageFromSearchParams(params);
   const sortBy = patch.sortBy ?? parseSortByFromSearchParams(params);
+  const source =
+    patch.source !== undefined ? patch.source.trim() : parseSourceFromSearchParams(params);
   const perPage = patch.perPage ?? parsePerPageFromSearchParams(params);
 
   params.delete("sort");
@@ -135,6 +147,9 @@ export function buildJobsListHref(
 
   if (sortBy === DEFAULT_JOBS_SORT_BY) params.delete(URL_SORT_BY_KEY);
   else params.set(URL_SORT_BY_KEY, sortBy);
+
+  if (!source) params.delete(URL_SOURCE_KEY);
+  else params.set(URL_SOURCE_KEY, source);
 
   if (perPage === DEFAULT_PAGE_SIZE) params.delete(URL_PER_PAGE_KEY);
   else params.set(URL_PER_PAGE_KEY, String(perPage));
