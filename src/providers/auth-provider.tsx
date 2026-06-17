@@ -24,7 +24,6 @@ import {
   refreshAccessToken,
   scheduleProactiveRefresh,
 } from "@/lib/auth-session";
-import { startSessionTimeoutDevLogger } from "@/lib/session-timeout-dev-logger";
 import {
   clearStoredTokens,
   getStoredAccessToken,
@@ -158,11 +157,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return scheduleProactiveRefresh(() => {
       void refreshAccessToken();
     });
-  }, [status, accessToken]);
-
-  useEffect(() => {
-    if (status !== "authenticated") return;
-    return startSessionTimeoutDevLogger();
   }, [status, accessToken]);
 
   const login = useCallback(async (email: string, password: string) => {

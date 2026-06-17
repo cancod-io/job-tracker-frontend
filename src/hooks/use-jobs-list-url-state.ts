@@ -7,15 +7,20 @@ import {
   parsePerPageFromSearchParams,
   parseSortByFromSearchParams,
   parseSourceFromSearchParams,
+  parseFetchChangeFromSearchParams,
+  parseFetchRunIdFromSearchParams,
   type PageSizeOption,
 } from "@/components/jobs/types";
 import type { ApiJobsSortBy } from "@/types/api-jobs";
+import type { ApiFetchChangeType } from "@/types/api-fetch-runs";
 
 export type JobsListUrlState = {
   page: number;
   sortBy: ApiJobsSortBy;
   source: string;
   perPage: PageSizeOption;
+  fetchRunId: number | null;
+  fetchChange: ApiFetchChangeType | null;
   /** Stable serialized form of the URL params — safe to use as a dep key. */
   searchParamsKey: string;
 };
@@ -34,6 +39,8 @@ export function useJobsListUrlState(): JobsListUrlState {
       sortBy: parseSortByFromSearchParams(sp),
       source: parseSourceFromSearchParams(sp),
       perPage: parsePerPageFromSearchParams(sp),
+      fetchRunId: parseFetchRunIdFromSearchParams(sp),
+      fetchChange: parseFetchChangeFromSearchParams(sp),
       searchParamsKey,
     };
   }, [searchParamsKey]);

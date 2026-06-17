@@ -8,8 +8,10 @@ import type { Job } from "@/types/job";
 type UseApplyFlowReturn = {
   pendingApplyJobs: ReturnType<typeof useApplicationsStore.getState>["pendingApplyJobs"];
   confirmingIds: Set<string>;
+  markingAppliedIds: Set<string>;
   handleApplyClick: (job: Job) => void;
   handleConfirmApply: (id: string) => Promise<void>;
+  handleMarkApplied: (job: Job) => Promise<void>;
   dismissPending: (id: string) => void;
 };
 
@@ -27,6 +29,7 @@ export function useApplyFlow(): UseApplyFlowReturn {
   const createApp = useApplicationsStore((s) => s.createApp);
 
   const [confirmingIds, setConfirmingIds] = useState<Set<string>>(() => new Set());
+  const [markingAppliedIds, setMarkingAppliedIds] = useState<Set<string>>(() => new Set());
 
   const handleApplyClick = useCallback(
     (job: Job) => {
@@ -72,11 +75,39 @@ export function useApplyFlow(): UseApplyFlowReturn {
     [pendingApplyJobs, createApp, removePendingApplyJob],
   );
 
+  const handleMarkApplied = useCallback(
+    async (job: Job) => {
+      const jobId = Number(job.id);
+      const jobKey = job.id;
+
+      setMarkingAppliedIds((prev) => new Set(prev).add(jobKey));
+      try {
+        await createApp(jobId);
+        notify.success(`Marked as applied — ${job.title}`, {
+          title: "Application tracked",
+        });
+        const pending = pendingApplyJobs.find((p) => p.jobId === jobId);
+        if (pending) removePendingApplyJob(pending.id);
+      } catch (e) {
+        notify.error(e instanceof Error ? e.message : "Could not save application.");
+      } finally {
+        setMarkingAppliedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(jobKey);
+          return next;
+        });
+      }
+    },
+    [createApp, pendingApplyJobs, removePendingApplyJob],
+  );
+
   return {
     pendingApplyJobs,
     confirmingIds,
+    markingAppliedIds,
     handleApplyClick,
     handleConfirmApply,
+    handleMarkApplied,
     dismissPending: removePendingApplyJob,
   };
 }

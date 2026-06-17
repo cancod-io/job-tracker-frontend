@@ -14,6 +14,7 @@ import { jobAtsStatusBadgeClass, jobAtsStatusLabel } from "@/lib/application-sta
 import { copyTextToClipboard } from "@/lib/copy-to-clipboard";
 import { notify } from "@/lib/notify";
 import { JobApplyButton } from "@/components/jobs/job-apply-button";
+import { JobMarkAppliedButton } from "@/components/jobs/job-mark-applied-button";
 import { TrackedStatusBadge } from "@/components/jobs/tracked-status-badge";
 import { JobNewBadge } from "@/components/jobs/job-new-badge";
 import { JobSourceBadge } from "@/components/jobs/job-source-badge";
@@ -87,6 +88,8 @@ type JobDetailPanelProps = {
   onClose: () => void;
   trackedInfo?: TrackedInfo;
   onApplyClick: (job: Job) => void;
+  onMarkApplied: (job: Job) => void;
+  markingApplied?: boolean;
 };
 
 const applyPrimaryBtnClass = cn(
@@ -108,7 +111,14 @@ const footerSecondaryBtnClass = cn(
  * Slide-over detail panel that shows full job information.
  * Renders inside the animated overlay managed by `JobsList`.
  */
-export function JobDetailPanel({ job, onClose, trackedInfo, onApplyClick }: JobDetailPanelProps) {
+export function JobDetailPanel({
+  job,
+  onClose,
+  trackedInfo,
+  onApplyClick,
+  onMarkApplied,
+  markingApplied = false,
+}: JobDetailPanelProps) {
   const applyBlocked = isApplyActionBlocked(job, trackedInfo);
   const applyUrl = job.applyUrl?.trim() ?? "";
   const hasApplyUrl = Boolean(applyUrl && applyUrl !== "#");
@@ -242,20 +252,29 @@ export function JobDetailPanel({ job, onClose, trackedInfo, onApplyClick }: JobD
             className="h-10 min-h-10 flex-1 px-4 text-sm md:flex-initial"
           />
         ) : (
-          <JobApplyButton
-            job={job}
-            onApplyClick={onApplyClick}
-            disabled={applyBlocked}
-            label={
-              applyBlocked
-                ? `Apply unavailable — status is ${jobAtsStatusLabel(job.atsStatus)}`
-                : `Apply to ${job.title} at ${job.company}`
-            }
-            className={applyPrimaryBtnClass}
-          >
-            Apply now
-            <ExternalLink className="size-4 shrink-0" aria-hidden />
-          </JobApplyButton>
+          <>
+            <JobApplyButton
+              job={job}
+              onApplyClick={onApplyClick}
+              disabled={applyBlocked}
+              label={
+                applyBlocked
+                  ? `Apply unavailable — status is ${jobAtsStatusLabel(job.atsStatus)}`
+                  : `Apply to ${job.title} at ${job.company}`
+              }
+              className={applyPrimaryBtnClass}
+            >
+              Apply now
+              <ExternalLink className="size-4 shrink-0" aria-hidden />
+            </JobApplyButton>
+            <JobMarkAppliedButton
+              job={job}
+              onMarkApplied={onMarkApplied}
+              disabled={applyBlocked}
+              loading={markingApplied}
+              className={footerSecondaryBtnClass}
+            />
+          </>
         )}
         {trackedInfo && hasApplyUrl ? (
           <a

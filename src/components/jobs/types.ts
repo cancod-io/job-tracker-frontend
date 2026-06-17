@@ -1,5 +1,9 @@
 import type { ApiApplicationStatus } from "@/types/application";
 import { API_JOBS_SORT_BY, type ApiJobsSortBy } from "@/types/api-jobs";
+import {
+  API_FETCH_CHANGE_TYPES,
+  type ApiFetchChangeType,
+} from "@/types/api-fetch-runs";
 
 // ─── View mode ─────────────────────────────────────────────────────────────
 
@@ -50,6 +54,8 @@ export const URL_PAGE_KEY = "page";
 export const URL_SORT_BY_KEY = "sort_by";
 export const URL_SOURCE_KEY = "source";
 export const URL_PER_PAGE_KEY = "per_page";
+export const URL_FETCH_RUN_ID_KEY = "fetch_run_id";
+export const URL_FETCH_CHANGE_KEY = "fetch_change";
 
 /** Dropdown value when no `source` query param is sent to the API. */
 export const ALL_JOB_SOURCES_VALUE = "";
@@ -121,6 +127,25 @@ export function parseSourceFromSearchParams(sp: URLSearchParams): string {
   return sp.get(URL_SOURCE_KEY)?.trim() ?? ALL_JOB_SOURCES_VALUE;
 }
 
+function isApiFetchChangeType(value: string): value is ApiFetchChangeType {
+  return (API_FETCH_CHANGE_TYPES as readonly string[]).includes(value);
+}
+
+/** Active fetch diff filter; null means show all jobs for the source (no diff). */
+export function parseFetchChangeFromSearchParams(sp: URLSearchParams): ApiFetchChangeType | null {
+  const raw = sp.get(URL_FETCH_CHANGE_KEY)?.trim();
+  if (!raw || !isApiFetchChangeType(raw)) return null;
+  return raw;
+}
+
+/** Selected fetch run; null means latest run when `fetch_change` is set. */
+export function parseFetchRunIdFromSearchParams(sp: URLSearchParams): number | null {
+  const raw = sp.get(URL_FETCH_RUN_ID_KEY)?.trim();
+  if (!raw) return null;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) && n >= 1 ? n : null;
+}
+
 export function buildJobsListHref(
   pathname: string,
   base: URLSearchParams,
@@ -129,6 +154,8 @@ export function buildJobsListHref(
     sortBy?: ApiJobsSortBy;
     source?: string;
     perPage?: PageSizeOption;
+    fetchRunId?: number | null;
+    fetchChange?: ApiFetchChangeType | null;
   },
 ): string {
   const params = new URLSearchParams(base.toString());
@@ -137,6 +164,12 @@ export function buildJobsListHref(
   const source =
     patch.source !== undefined ? patch.source.trim() : parseSourceFromSearchParams(params);
   const perPage = patch.perPage ?? parsePerPageFromSearchParams(params);
+  const fetchChange =
+    patch.fetchChange !== undefined
+      ? patch.fetchChange
+      : parseFetchChangeFromSearchParams(params);
+  const fetchRunId =
+    patch.fetchRunId !== undefined ? patch.fetchRunId : parseFetchRunIdFromSearchParams(params);
 
   params.delete("sort");
   params.delete("sort_order");
@@ -153,6 +186,15 @@ export function buildJobsListHref(
 
   if (perPage === DEFAULT_PAGE_SIZE) params.delete(URL_PER_PAGE_KEY);
   else params.set(URL_PER_PAGE_KEY, String(perPage));
+
+  if (!fetchChange || !source) {
+    params.delete(URL_FETCH_CHANGE_KEY);
+    params.delete(URL_FETCH_RUN_ID_KEY);
+  } else {
+    params.set(URL_FETCH_CHANGE_KEY, fetchChange);
+    if (fetchRunId == null) params.delete(URL_FETCH_RUN_ID_KEY);
+    else params.set(URL_FETCH_RUN_ID_KEY, String(fetchRunId));
+  }
 
   const qs = params.toString();
   const hash = pathname === "/" ? "#jobs" : "";

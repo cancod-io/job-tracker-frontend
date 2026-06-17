@@ -2,6 +2,7 @@ import { Bookmark, ExternalLink, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { companyInitials } from "@/lib/company-utils";
 import { JobApplyButton } from "@/components/jobs/job-apply-button";
+import { JobMarkAppliedButton } from "@/components/jobs/job-mark-applied-button";
 import { TrackedStatusBadge } from "@/components/jobs/tracked-status-badge";
 import { JobNewBadge } from "@/components/jobs/job-new-badge";
 import { JobSourceBadge } from "@/components/jobs/job-source-badge";
@@ -30,6 +31,8 @@ type JobCardProps = {
   trackedInfo?: TrackedInfo;
   onSelect: () => void;
   onApplyClick: (job: Job) => void;
+  onMarkApplied: (job: Job) => void;
+  markingApplied?: boolean;
 };
 
 /**
@@ -43,6 +46,8 @@ export function JobCard({
   trackedInfo,
   onSelect,
   onApplyClick,
+  onMarkApplied,
+  markingApplied = false,
 }: JobCardProps) {
   function handleCardClick(e: React.MouseEvent<HTMLElement>) {
     if (isInteractiveTarget(e.target)) return;
@@ -159,11 +164,19 @@ export function JobCard({
                 className="h-8 px-2.5 text-[11px]"
               />
             ) : (
-              <JobApplyButton
-                job={job}
-                onApplyClick={onApplyClick}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-[11px] font-semibold text-primary-foreground transition-[opacity,transform] hover:opacity-90 active:scale-[0.97]"
-              />
+              <>
+                <JobMarkAppliedButton
+                  job={job}
+                  onMarkApplied={onMarkApplied}
+                  loading={markingApplied}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                />
+                <JobApplyButton
+                  job={job}
+                  onApplyClick={onApplyClick}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-[11px] font-semibold text-primary-foreground transition-[opacity,transform] hover:opacity-90 active:scale-[0.97]"
+                />
+              </>
             )}
             <button
               type="button"
@@ -295,11 +308,19 @@ export function JobCard({
             </a>
           </div>
         ) : (
-          <JobApplyButton
-            job={job}
-            onApplyClick={onApplyClick}
-            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm transition-[transform,background-color] hover:opacity-90 active:scale-[0.98]"
-          />
+          <>
+            <JobApplyButton
+              job={job}
+              onApplyClick={onApplyClick}
+              className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm transition-[transform,background-color] hover:opacity-90 active:scale-[0.98]"
+            />
+            <JobMarkAppliedButton
+              job={job}
+              onMarkApplied={onMarkApplied}
+              loading={markingApplied}
+              className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-4 text-xs font-semibold text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+            />
+          </>
         )}
         <button
           type="button"

@@ -22,6 +22,11 @@ function appendJobsQueryParams(search: URLSearchParams, params: FetchJobsListPar
   if (company) search.set("company", company);
   const location = params.location?.trim();
   if (location) search.set("location", location);
+
+  if (params.fetch_run_id != null) {
+    search.set("fetch_run_id", String(params.fetch_run_id));
+  }
+  if (params.fetch_change) search.set("fetch_change", params.fetch_change);
 }
 
 export async function fetchJobSources(): Promise<string[]> {

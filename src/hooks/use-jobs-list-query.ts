@@ -5,6 +5,7 @@ import { fetchJobsList } from "@/lib/jobs-api";
 import { mapApiJobListItemToJob } from "@/lib/job-mapper";
 import type { Job } from "@/types/job";
 import type { ApiJobsSortBy } from "@/types/api-jobs";
+import type { ApiFetchChangeType } from "@/types/api-fetch-runs";
 
 type UseJobsListQueryParams = {
   page: number;
@@ -12,6 +13,8 @@ type UseJobsListQueryParams = {
   sortBy: ApiJobsSortBy;
   source: string;
   query: string;
+  fetchRunId: number | null;
+  fetchChange: ApiFetchChangeType | null;
 };
 
 type JobsListQueryData = {
@@ -25,9 +28,23 @@ export function useJobsListQuery({
   sortBy,
   source,
   query,
+  fetchRunId,
+  fetchChange,
 }: UseJobsListQueryParams) {
+  const trimmedSource = source.trim();
+  const inDiffMode = Boolean(trimmedSource && fetchChange);
+
   return useQuery<JobsListQueryData>({
-    queryKey: ["jobs-list", page, perPage, sortBy, source, query],
+    queryKey: [
+      "jobs-list",
+      page,
+      perPage,
+      sortBy,
+      trimmedSource,
+      query,
+      fetchRunId,
+      fetchChange,
+    ],
     placeholderData: keepPreviousData,
     queryFn: async () => {
       const offset = (page - 1) * perPage;
@@ -35,10 +52,12 @@ export function useJobsListQuery({
         limit: perPage,
         offset,
         sort_by: sortBy,
-        source: source.trim() || undefined,
+        source: trimmedSource || undefined,
         include_inactive: false,
         include_duplicates: false,
         q: query.trim() || undefined,
+        fetch_run_id: inDiffMode && fetchRunId != null ? fetchRunId : undefined,
+        fetch_change: inDiffMode ? fetchChange ?? undefined : undefined,
       });
       return {
         total: data.total,
