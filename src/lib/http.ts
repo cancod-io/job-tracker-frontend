@@ -1,5 +1,4 @@
-import { createSessionExpiredError, type ApiAuthErrorShape } from "@/lib/auth-errors";
-import { clearStoredTokens, signalSessionExpired } from "@/lib/auth-token";
+import type { ApiAuthErrorShape } from "@/lib/auth-errors";
 
 /** Abortable fetch so a bad API host cannot strand the UI in a loading state forever. */
 export async function fetchWithTimeout(
@@ -68,16 +67,11 @@ export async function readApiErrorMessage(
   }
 }
 
-/** Throws `SessionExpiredError` on 401 (clears tokens); otherwise a generic `Error`. */
+/** Throws on non-OK responses. Session expiry is handled by `fetchAuthed` in auth-session. */
 export async function assertOkResponse(
   res: Response,
   fallback = `Request failed (${res.status})`,
 ): Promise<void> {
   if (res.ok) return;
-  if (res.status === 401) {
-    clearStoredTokens();
-    signalSessionExpired();
-    throw createSessionExpiredError();
-  }
   throw new Error(await readApiErrorMessage(res, fallback));
 }

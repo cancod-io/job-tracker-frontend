@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { authRequestHeaders } from "@/lib/auth-token";
-import { fetchWithTimeout } from "@/lib/http";
+import { fetchAuthed } from "@/lib/auth-session";
 import { hasProfileAvatar, PROFILE_AVATAR_DOWNLOAD_PATH } from "@/lib/profile-avatar-url";
 
 const AVATAR_FETCH_TIMEOUT_MS = 30_000;
@@ -16,9 +15,9 @@ const AVATAR_FETCH_TIMEOUT_MS = 30_000;
 export const AVATAR_BLOB_QUERY_KEY = ["profile", "me", "avatar-blob"] as const;
 
 async function fetchAvatarBlob(): Promise<Blob> {
-  const res = await fetchWithTimeout(
+  const res = await fetchAuthed(
     PROFILE_AVATAR_DOWNLOAD_PATH,
-    { headers: authRequestHeaders(), credentials: "omit", cache: "no-store" },
+    { cache: "no-store" },
     AVATAR_FETCH_TIMEOUT_MS,
   );
   if (!res.ok) throw new Error(`Avatar fetch failed (${res.status})`);

@@ -2,9 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Briefcase, Plus, RefreshCw } from "lucide-react";
+import { Briefcase, Kanban, List, Plus, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { notify } from "@/lib/notify";
+import {
+  readApplicationsViewMode,
+  writeApplicationsViewMode,
+  type ApplicationsViewMode,
+} from "@/lib/applications-view-mode";
 import { companyName, jobTitle, sortApplications, filterByDateRange } from "@/lib/application-utils";
 import { formatDateRange } from "@/lib/date-utils";
 import { useKanbanDnd } from "@/hooks/use-kanban-dnd";
@@ -12,7 +17,12 @@ import { useApplicationsStore } from "@/store/applications-store";
 import { COLUMNS } from "@/components/applications/constants";
 import { StatsBar } from "@/components/applications/stats-bar";
 import { KanbanColumn } from "@/components/applications/kanban-column";
+import {
+  ApplicationsListView,
+  type ApplicationListStatusFilter,
+} from "@/components/applications/applications-list-view";
 import { DateRangeFilter } from "@/components/applications/date-range-filter";
+import { SortMenu } from "@/components/applications/sort-menu";
 import { AddApplicationModal } from "@/components/applications/add-application-modal";
 import { NotesModal } from "@/components/applications/notes-modal";
 import { NotesPreviewModal } from "@/components/applications/notes-preview-modal";
@@ -58,6 +68,18 @@ export function KanbanBoard() {
   const [previewingNotes, setPreviewingNotes] = useState<ApiApplication | null>(null);
   const [detailApp, setDetailApp] = useState<ApiApplication | null>(null);
   const [addingApp, setAddingApp] = useState(false);
+  const [viewMode, setViewModeState] = useState<ApplicationsViewMode>("kanban");
+  const [listStatusFilter, setListStatusFilter] = useState<ApplicationListStatusFilter>("all");
+  const [listSort, setListSort] = useState<ApplicationSortKey>(DEFAULT_SORT);
+
+  useEffect(() => {
+    setViewModeState(readApplicationsViewMode());
+  }, []);
+
+  const setViewMode = useCallback((mode: ApplicationsViewMode) => {
+    setViewModeState(mode);
+    writeApplicationsViewMode(mode);
+  }, []);
 
   // ── Initial data fetch ──────────────────────────────────────────────────
   useEffect(() => {
@@ -96,6 +118,33 @@ export function KanbanBoard() {
     );
     return sortApplications(cols, columnSorts[colId] ?? DEFAULT_SORT);
   }
+
+  const dateFilteredApps = useMemo(
+    () => filterByDateRange(searchedApps, dateFrom, dateTo),
+    [searchedApps, dateFrom, dateTo],
+  );
+
+  const listStatusCounts = useMemo(() => {
+    const counts: Record<ApplicationListStatusFilter, number> = {
+      all: dateFilteredApps.length,
+      applied: 0,
+      interviewing: 0,
+      offer: 0,
+      failed: 0,
+    };
+    for (const app of dateFilteredApps) {
+      counts[app.status] += 1;
+    }
+    return counts;
+  }, [dateFilteredApps]);
+
+  const appsForList = useMemo(() => {
+    const filtered =
+      listStatusFilter === "all"
+        ? dateFilteredApps
+        : dateFilteredApps.filter((a) => a.status === listStatusFilter);
+    return sortApplications(filtered, listSort);
+  }, [dateFilteredApps, listStatusFilter, listSort]);
 
   function handleColumnDateChange(colId: ApiApplicationStatus, from: string, to: string) {
     setColumnDates((prev) => {
@@ -182,6 +231,37 @@ export function KanbanBoard() {
           onChange={(from, to) => { setDateFrom(from); setDateTo(to); }}
         />
 
+        {viewMode === "list" ? (
+          <SortMenu value={listSort} onChange={setListSort} />
+        ) : null}
+
+        <div
+          className="inline-flex shrink-0 rounded-full border border-input bg-muted/50 p-1 shadow-sm"
+          role="group"
+          aria-label="Applications layout"
+        >
+          {([
+            { mode: "kanban" as const, label: "Board", icon: Kanban },
+            { mode: "list" as const, label: "List", icon: List },
+          ]).map(({ mode, label, icon: Icon }) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setViewMode(mode)}
+              aria-pressed={viewMode === mode}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors duration-200 motion-reduce:transition-none",
+                viewMode === mode
+                  ? "bg-background text-foreground shadow-sm ring-1 ring-border/80"
+                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+              )}
+            >
+              <Icon className="size-3.5 shrink-0" aria-hidden />
+              <span className="hidden sm:inline">{label}</span>
+            </button>
+          ))}
+        </div>
+
         {/* Track Job */}
         <button
           type="button"
@@ -228,23 +308,31 @@ export function KanbanBoard() {
 
       {/* Loading skeleton */}
       {loading && applications.length === 0 ? (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {COLUMNS.map((col) => (
-            <div
-              key={col.id}
-              className="flex min-w-[260px] max-w-[320px] flex-1 flex-col gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4"
-              aria-hidden
-            >
-              <div className="flex items-center gap-2">
-                <div className="size-2.5 animate-pulse rounded-full bg-muted-foreground/30" />
-                <div className="h-4 w-20 animate-pulse rounded bg-muted-foreground/20" />
+        viewMode === "list" ? (
+          <div className="space-y-2.5" aria-hidden>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-[4.5rem] animate-pulse rounded-xl bg-muted/50" />
+            ))}
+          </div>
+        ) : (
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {COLUMNS.map((col) => (
+              <div
+                key={col.id}
+                className="flex min-w-[260px] max-w-[320px] flex-1 flex-col gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4"
+                aria-hidden
+              >
+                <div className="flex items-center gap-2">
+                  <div className="size-2.5 animate-pulse rounded-full bg-muted-foreground/30" />
+                  <div className="h-4 w-20 animate-pulse rounded bg-muted-foreground/20" />
+                </div>
+                {[1, 2].map((i) => (
+                  <div key={i} className="h-28 animate-pulse rounded-xl bg-muted/60" />
+                ))}
               </div>
-              {[1, 2].map((i) => (
-                <div key={i} className="h-28 animate-pulse rounded-xl bg-muted/60" />
-              ))}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
       ) : null}
 
       {/* Empty state */}
@@ -270,7 +358,7 @@ export function KanbanBoard() {
       ) : null}
 
       {/* ── Kanban board (full-bleed) ── */}
-      {!loading || applications.length > 0 ? (
+      {viewMode === "kanban" && (!loading || applications.length > 0) ? (
         <div
           className="-mx-4 sm:-mx-6 lg:-mx-8 xl:-mx-10 flex items-start gap-4 overflow-x-auto px-4 pb-6 pt-1 sm:px-6 lg:px-8 xl:px-10"
           aria-label="Application pipeline board"
@@ -300,6 +388,21 @@ export function KanbanBoard() {
             />
           ))}
         </div>
+      ) : null}
+
+      {/* ── List view ── */}
+      {viewMode === "list" && (!loading || applications.length > 0) ? (
+        <ApplicationsListView
+          applications={appsForList}
+          statusFilter={listStatusFilter}
+          onStatusFilterChange={setListStatusFilter}
+          statusCounts={listStatusCounts}
+          onOpen={setDetailApp}
+          onNotesPreview={setPreviewingNotes}
+          onEditNotes={setEditingNotes}
+          onDelete={handleDelete}
+          onMoveToColumn={handleMoveToColumn}
+        />
       ) : null}
 
       {/* ── Modals ── */}
@@ -337,7 +440,7 @@ export function KanbanBoard() {
       ) : null}
 
       {/* Drag indicator toast */}
-      {draggingId !== null ? (
+      {draggingId !== null && viewMode === "kanban" ? (
         <div
           className="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-xs font-medium text-muted-foreground shadow-lg"
           aria-live="polite"

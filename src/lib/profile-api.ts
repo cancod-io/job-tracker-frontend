@@ -1,5 +1,5 @@
-import { authRequestHeaders } from "@/lib/auth-token";
-import { assertOkResponse, fetchWithTimeout, readApiErrorMessage } from "@/lib/http";
+import { fetchAuthed } from "@/lib/auth-session";
+import { assertOkResponse, readApiErrorMessage } from "@/lib/http";
 import { normalizeProfilePictureUrl } from "@/lib/profile-avatar-url";
 import { validateAvatarFile, validateCvFile } from "@/lib/profile-file-utils";
 import type {
@@ -15,10 +15,7 @@ const UPLOAD_TIMEOUT_MS = 60_000;
 const DOWNLOAD_TIMEOUT_MS = 60_000;
 
 export async function fetchProfile(): Promise<ProfileResponse> {
-  const res = await fetchWithTimeout("/api/v1/profile/me", {
-    headers: authRequestHeaders(),
-    credentials: "omit",
-  });
+  const res = await fetchAuthed("/api/v1/profile/me");
   await assertOkResponse(res, "Could not load your profile.");
   const data = (await res.json()) as ProfileResponse;
   return {
@@ -28,10 +25,9 @@ export async function fetchProfile(): Promise<ProfileResponse> {
 }
 
 export async function updateProfile(payload: ProfileUpdateRequest): Promise<ProfileResponse> {
-  const res = await fetchWithTimeout("/api/v1/profile/me", {
+  const res = await fetchAuthed("/api/v1/profile/me", {
     method: "PATCH",
-    headers: { ...authRequestHeaders(), "Content-Type": "application/json" },
-    credentials: "omit",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   await assertOkResponse(res, "Could not update your profile.");
@@ -41,18 +37,16 @@ export async function updateProfile(payload: ProfileUpdateRequest): Promise<Prof
 const PASSWORD_CHANGE_TIMEOUT_MS = 30_000;
 
 export async function changePassword(payload: ChangePasswordRequest): Promise<void> {
-  const res = await fetchWithTimeout(
+  const res = await fetchAuthed(
     "/api/v1/profile/me/password",
     {
       method: "POST",
-      headers: { ...authRequestHeaders(), "Content-Type": "application/json" },
-      credentials: "omit",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     },
     PASSWORD_CHANGE_TIMEOUT_MS,
   );
   await assertOkResponse(res, "Could not update your password.");
-  // Success may be 204 No Content or an empty body — drain without parsing JSON.
   await res.text().catch(() => "");
 }
 
@@ -63,12 +57,10 @@ export async function uploadAvatar(file: File): Promise<AvatarUploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await fetchWithTimeout(
+  const res = await fetchAuthed(
     "/api/v1/profile/me/avatar",
     {
       method: "POST",
-      headers: authRequestHeaders(),
-      credentials: "omit",
       body: formData,
     },
     UPLOAD_TIMEOUT_MS,
@@ -82,19 +74,14 @@ export async function uploadAvatar(file: File): Promise<AvatarUploadResponse> {
 }
 
 export async function deleteAvatar(): Promise<void> {
-  const res = await fetchWithTimeout("/api/v1/profile/me/avatar", {
+  const res = await fetchAuthed("/api/v1/profile/me/avatar", {
     method: "DELETE",
-    headers: authRequestHeaders(),
-    credentials: "omit",
   });
   await assertOkResponse(res, "Could not remove profile picture.");
 }
 
 export async function fetchCvs(): Promise<UserCv[]> {
-  const res = await fetchWithTimeout("/api/v1/profile/me/cvs", {
-    headers: authRequestHeaders(),
-    credentials: "omit",
-  });
+  const res = await fetchAuthed("/api/v1/profile/me/cvs");
   await assertOkResponse(res, "Could not load your CVs.");
   const data = (await res.json()) as UserCvListResponse | UserCv[];
   if (Array.isArray(data)) return data;
@@ -108,12 +95,10 @@ export async function uploadCv(file: File): Promise<UserCv> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await fetchWithTimeout(
+  const res = await fetchAuthed(
     "/api/v1/profile/me/cvs",
     {
       method: "POST",
-      headers: authRequestHeaders(),
-      credentials: "omit",
       body: formData,
     },
     UPLOAD_TIMEOUT_MS,
@@ -123,10 +108,8 @@ export async function uploadCv(file: File): Promise<UserCv> {
 }
 
 export async function deleteCv(cvId: number): Promise<void> {
-  const res = await fetchWithTimeout(`/api/v1/profile/me/cvs/${cvId}`, {
+  const res = await fetchAuthed(`/api/v1/profile/me/cvs/${cvId}`, {
     method: "DELETE",
-    headers: authRequestHeaders(),
-    credentials: "omit",
   });
   await assertOkResponse(res, "Could not delete CV.");
 }
@@ -150,14 +133,10 @@ export type CvBlob = {
   filename: string;
 };
 
-/** Fetch a CV's bytes through the authenticated proxy, preserving its filename and type. */
 export async function fetchCvBlob(cv: UserCv): Promise<CvBlob> {
-  const res = await fetchWithTimeout(
+  const res = await fetchAuthed(
     `/api/v1/profile/me/cvs/${cv.id}/download`,
-    {
-      headers: authRequestHeaders(),
-      credentials: "omit",
-    },
+    {},
     DOWNLOAD_TIMEOUT_MS,
   );
   if (!res.ok) {

@@ -1,5 +1,5 @@
-import { authRequestHeaders } from "@/lib/auth-token";
-import { assertOkResponse, fetchWithTimeout } from "@/lib/http";
+import { fetchAuthed } from "@/lib/auth-session";
+import { assertOkResponse } from "@/lib/http";
 import type {
   ApiApplication,
   ApiApplicationsListResponse,
@@ -18,10 +18,7 @@ export async function fetchApplicationsList(params: {
   search.set("offset", String(params.offset ?? 0));
   if (params.status) search.set("status", params.status);
 
-  const res = await fetchWithTimeout(`/api/v1/applications?${search.toString()}`, {
-    headers: authRequestHeaders(),
-    credentials: "omit",
-  });
+  const res = await fetchAuthed(`/api/v1/applications?${search.toString()}`);
 
   await assertOkResponse(res, "Failed to load applications.");
 
@@ -33,10 +30,9 @@ export async function fetchApplicationsList(params: {
 }
 
 export async function createApplication(payload: CreateApplicationPayload): Promise<ApiApplication> {
-  const res = await fetchWithTimeout("/api/v1/applications", {
+  const res = await fetchAuthed("/api/v1/applications", {
     method: "POST",
-    headers: { ...authRequestHeaders(), "Content-Type": "application/json" },
-    credentials: "omit",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 
@@ -49,10 +45,9 @@ export async function updateApplication(
   id: number,
   payload: UpdateApplicationPayload,
 ): Promise<ApiApplication> {
-  const res = await fetchWithTimeout(`/api/v1/applications/${id}`, {
+  const res = await fetchAuthed(`/api/v1/applications/${id}`, {
     method: "PATCH",
-    headers: { ...authRequestHeaders(), "Content-Type": "application/json" },
-    credentials: "omit",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 
@@ -62,10 +57,8 @@ export async function updateApplication(
 }
 
 export async function deleteApplication(id: number): Promise<void> {
-  const res = await fetchWithTimeout(`/api/v1/applications/${id}`, {
+  const res = await fetchAuthed(`/api/v1/applications/${id}`, {
     method: "DELETE",
-    headers: authRequestHeaders(),
-    credentials: "omit",
   });
 
   await assertOkResponse(res, "Could not remove application.");
