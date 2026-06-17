@@ -1,3 +1,4 @@
+import type { ApiFetchChangeType } from "@/types/api-fetch-runs";
 import type { JobAtsStatus } from "@/types/job";
 
 /** Canonical ATS statuses used in the jobs UI and list filters. */
@@ -113,6 +114,9 @@ export type FetchJobsListParams = {
   title?: string;
   company?: string;
   location?: string;
+  /** Filter jobs by fetch diff — requires `source`. Omit `fetch_run_id` for latest run. */
+  fetch_run_id?: number;
+  fetch_change?: ApiFetchChangeType;
 };
 
 export type ApiJobSourcesResponse = {

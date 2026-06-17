@@ -10,6 +10,7 @@ import { useApplicationsStore } from "@/store/applications-store";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useJobsListQuery } from "@/hooks/use-jobs-list-query";
 import { useJobSourcesQuery } from "@/hooks/use-job-sources-query";
+import { useFetchRunsQuery } from "@/hooks/use-fetch-runs-query";
 import { useJobsListUrlState } from "@/hooks/use-jobs-list-url-state";
 import { useSlideOverPanel } from "@/hooks/use-slide-over-panel";
 import { useApplyFlow } from "@/hooks/use-apply-flow";
@@ -19,6 +20,8 @@ import { JobCardSkeleton } from "@/components/jobs/job-card-skeleton";
 import { JobDetailPanel } from "@/components/jobs/job-detail-panel";
 import { JobsPagination } from "@/components/jobs/jobs-pagination";
 import { JobsToolbar } from "@/components/jobs/jobs-toolbar";
+import { FetchRunsTimeline } from "@/components/jobs/fetch-runs-timeline";
+import { FetchChangeTabs } from "@/components/jobs/fetch-change-tabs";
 import { ApplyConfirmBanner } from "@/components/jobs/apply-confirm-banner";
 import {
   buildJobsListHref,
@@ -29,6 +32,7 @@ import {
   DETAIL_TRANSITION_MS,
 } from "@/components/jobs/types";
 import type { ApiJobsSortBy } from "@/types/api-jobs";
+import type { ApiFetchChangeType } from "@/types/api-fetch-runs";
 import type { ExperienceLevel, Job, JobType } from "@/types/job";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -65,12 +69,16 @@ function matchesClientFilters(
 function renderEmptyStateMessage(args: {
   query: string;
   source: string;
+  fetchChange: ApiFetchChangeType | null;
   hasClientFilters: boolean;
   total: number;
   pageJobs: number;
 }): string {
   const trimmed = args.query.trim();
   const sourceLabel = args.source.trim();
+  if (args.fetchChange && args.total === 0) {
+    return `No ${args.fetchChange} jobs in this fetch run. Try another change type or run.`;
+  }
   // Search returned zero hits from the server.
   if (trimmed && args.total === 0) {
     return `No jobs match “${trimmed}”. Try a different keyword or clear the search.`;
@@ -110,9 +118,12 @@ export function JobsList() {
   const pathname = usePathname();
 
   // ── URL state ─────────────────────────────────────────────────────────────
-  const { page, sortBy, source, perPage, searchParamsKey } = useJobsListUrlState();
+  const { page, sortBy, source, perPage, fetchRunId, fetchChange, searchParamsKey } =
+    useJobsListUrlState();
 
   const jobSourcesQuery = useJobSourcesQuery();
+  const fetchRunsQuery = useFetchRunsQuery({ source });
+  const fetchRuns = useMemo(() => fetchRunsQuery.data?.runs ?? [], [fetchRunsQuery.data]);
   const sourceOptions = useMemo(() => {
     const list = jobSourcesQuery.data ?? [];
     if (source && !list.includes(source)) return [source, ...list];
@@ -146,22 +157,48 @@ export function JobsList() {
   const prevExperienceRef = useRef(experience);
   const prevJobTypeRef = useRef(jobType);
   const prevSourceRef = useRef(source);
+  const prevFetchRunIdRef = useRef(fetchRunId);
+  const prevFetchChangeRef = useRef(fetchChange);
   useEffect(() => {
     const queryChanged = prevDebouncedQueryRef.current !== debouncedQuery;
     const experienceChanged = prevExperienceRef.current !== experience;
     const jobTypeChanged = prevJobTypeRef.current !== jobType;
     const sourceChanged = prevSourceRef.current !== source;
+    const fetchRunChanged = prevFetchRunIdRef.current !== fetchRunId;
+    const fetchChangeChanged = prevFetchChangeRef.current !== fetchChange;
     prevDebouncedQueryRef.current = debouncedQuery;
     prevExperienceRef.current = experience;
     prevJobTypeRef.current = jobType;
     prevSourceRef.current = source;
+    prevFetchRunIdRef.current = fetchRunId;
+    prevFetchChangeRef.current = fetchChange;
 
-    if (!queryChanged && !experienceChanged && !jobTypeChanged && !sourceChanged) return;
+    if (
+      !queryChanged &&
+      !experienceChanged &&
+      !jobTypeChanged &&
+      !sourceChanged &&
+      !fetchRunChanged &&
+      !fetchChangeChanged
+    ) {
+      return;
+    }
     if (page <= 1) return;
 
     const sp = new URLSearchParams(searchParamsKey);
     router.replace(buildJobsListHref(pathname, sp, { page: 1 }), { scroll: false });
-  }, [debouncedQuery, experience, jobType, source, page, pathname, router, searchParamsKey]);
+  }, [
+    debouncedQuery,
+    experience,
+    jobType,
+    source,
+    fetchRunId,
+    fetchChange,
+    page,
+    pathname,
+    router,
+    searchParamsKey,
+  ]);
 
   // ── Fetch jobs ────────────────────────────────────────────────────────────
   const jobsQuery = useJobsListQuery({
@@ -170,6 +207,8 @@ export function JobsList() {
     sortBy,
     source,
     query: debouncedQuery,
+    fetchRunId,
+    fetchChange,
   });
   const total = jobsQuery.data?.total ?? 0;
   const loading = jobsQuery.isPending;
@@ -180,6 +219,15 @@ export function JobsList() {
     if (!jobsQuery.error) return;
     notify.error(jobsQuery.error instanceof Error ? jobsQuery.error.message : "Could not load jobs.");
   }, [jobsQuery.error]);
+
+  useEffect(() => {
+    if (!fetchRunsQuery.error) return;
+    notify.error(
+      fetchRunsQuery.error instanceof Error
+        ? fetchRunsQuery.error.message
+        : "Could not load fetch history.",
+    );
+  }, [fetchRunsQuery.error]);
 
   // ── Sync applications on mount ────────────────────────────────────────────
   useEffect(() => {
@@ -225,6 +273,8 @@ export function JobsList() {
       sortBy?: ApiJobsSortBy;
       source?: string;
       perPage?: PageSizeOption;
+      fetchRunId?: number | null;
+      fetchChange?: ApiFetchChangeType | null;
     }) => {
       scrollToPageTop();
       const sp = new URLSearchParams(searchParamsKey);
@@ -232,6 +282,16 @@ export function JobsList() {
     },
     [pathname, router, searchParamsKey],
   );
+
+  const activeFetchRun = useMemo(() => {
+    if (!fetchChange || fetchRuns.length === 0) return null;
+    if (fetchRunId != null) {
+      return fetchRuns.find((run) => run.id === fetchRunId) ?? fetchRuns[0] ?? null;
+    }
+    return fetchRuns[0] ?? null;
+  }, [fetchChange, fetchRunId, fetchRuns]);
+
+  const timelineSelectedRunId = fetchRunId ?? activeFetchRun?.id ?? null;
 
   // ── Detail panel ──────────────────────────────────────────────────────────
   const {
@@ -250,14 +310,16 @@ export function JobsList() {
     // Identity of `closeDetail` & `visibleJobs` would re-fire this on every render;
     // we only want to fire on the inputs that change the result set.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedQuery, page, perPage, sortBy, source, experience, jobType]);
+  }, [debouncedQuery, page, perPage, sortBy, source, fetchRunId, fetchChange, experience, jobType]);
 
   // ── Apply flow ────────────────────────────────────────────────────────────
   const {
     pendingApplyJobs,
     confirmingIds,
+    markingAppliedIds,
     handleApplyClick,
     handleConfirmApply,
+    handleMarkApplied,
     dismissPending,
   } = useApplyFlow();
 
@@ -285,10 +347,34 @@ export function JobsList() {
         sortBy={sortBy}
         onSortByChange={(next) => navigateList({ sortBy: next, page: 1 })}
         source={source}
-        onSourceChange={(next) => navigateList({ source: next, page: 1 })}
+        onSourceChange={(next) =>
+          navigateList({ source: next, page: 1, fetchRunId: null, fetchChange: null })
+        }
         sourceOptions={sourceOptions}
         sourcesLoading={jobSourcesQuery.isPending}
       />
+
+      {source ? (
+        <FetchRunsTimeline
+          source={source}
+          runs={fetchRuns}
+          loading={fetchRunsQuery.isPending}
+          selectedRunId={timelineSelectedRunId}
+          diffActive={Boolean(fetchChange)}
+          onSelectRun={(run) =>
+            navigateList({ fetchRunId: run.id, fetchChange: "added", page: 1 })
+          }
+          onClearDiff={() => navigateList({ fetchRunId: null, fetchChange: null, page: 1 })}
+        />
+      ) : null}
+
+      {activeFetchRun && fetchChange ? (
+        <FetchChangeTabs
+          run={activeFetchRun}
+          activeChange={fetchChange}
+          onChange={(next) => navigateList({ fetchChange: next, page: 1 })}
+        />
+      ) : null}
 
       <JobsPagination placement="top" {...sharedPaginationProps} />
 
@@ -318,6 +404,8 @@ export function JobsList() {
                 trackedInfo={trackedJobsMap.get(Number(job.id))}
                 onSelect={() => openDetail(job.id)}
                 onApplyClick={handleApplyClick}
+                onMarkApplied={(j) => void handleMarkApplied(j)}
+                markingApplied={markingAppliedIds.has(job.id)}
               />
             ))}
 
@@ -330,6 +418,7 @@ export function JobsList() {
             {renderEmptyStateMessage({
               query: debouncedQuery,
               source,
+              fetchChange,
               hasClientFilters: experience !== "All" || jobType !== "All",
               total,
               pageJobs: jobs.length,
@@ -383,6 +472,8 @@ export function JobsList() {
                 onClose={closeDetail}
                 trackedInfo={trackedJobsMap.get(Number(detailJob.id))}
                 onApplyClick={handleApplyClick}
+                onMarkApplied={(j) => void handleMarkApplied(j)}
+                markingApplied={markingAppliedIds.has(detailJob.id)}
               />
             </div>
           </div>
