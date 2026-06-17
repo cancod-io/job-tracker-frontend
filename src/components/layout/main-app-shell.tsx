@@ -61,7 +61,7 @@ export function MainAppShell({ children }: { children: ReactNode }) {
         </p>
       </aside>
 
-      <header className="sticky top-0 z-30 border-b border-border bg-background shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background">
+      <header className="sticky top-0 z-50 border-b border-border bg-background shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background">
         <div className="flex h-14 w-full items-center justify-between gap-3 px-4 sm:h-16 sm:gap-4 sm:px-6 lg:px-8 xl:px-10">
           <div className="flex min-w-0 flex-1 items-center gap-6 lg:gap-10">
             <Link

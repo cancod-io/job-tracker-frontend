@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, LogOut, Settings, UserRound } from "lucide-react";
+import { ChevronDown, LogOut, UserRound } from "lucide-react";
 import { LOGIN_PATH, REGISTER_PATH } from "@/config/auth-routes";
 import { useAuth } from "@/providers/auth-provider";
 import { useProfileQuery } from "@/hooks/use-profile";
 import { useAvatarDisplayUrl } from "@/hooks/use-avatar-display-url";
+import { FloatingMenuPortal } from "@/components/ui/floating-menu";
 import { cn } from "@/lib/utils";
 
 function initials(name: string, email: string): string {
@@ -26,7 +27,7 @@ const menuItemClass =
 export function UserProfileMenu() {
   const { status, user, logout } = useAuth();
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   // Mirror the profile avatar in the header — shared with the profile page via
   // React Query, so an upload/removal updates here instantly.
@@ -34,15 +35,6 @@ export function UserProfileMenu() {
   const { displayUrl: avatarUrl } = useAvatarDisplayUrl(
     profileQuery.data?.profile_picture_url ?? null,
   );
-
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
 
   if (status === "loading") {
     return (
@@ -75,8 +67,9 @@ export function UserProfileMenu() {
   const letter = initials(user.full_name, user.email);
 
   return (
-    <div className="relative shrink-0" ref={ref}>
+    <div className="relative shrink-0">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
@@ -109,12 +102,13 @@ export function UserProfileMenu() {
         <ChevronDown className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       </button>
 
-      {open ? (
-        <div
-          className="absolute right-0 top-full z-50 mt-2 w-60 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-card py-1 shadow-lg"
-          role="menu"
-          aria-orientation="vertical"
-        >
+      <FloatingMenuPortal
+        open={open}
+        anchorRef={triggerRef}
+        onClose={() => setOpen(false)}
+        className="w-60 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-card py-1 shadow-lg"
+      >
+        <div role="menu" aria-orientation="vertical">
           <div className="border-b border-border px-3 py-2 sm:hidden">
             <p className="truncate text-sm font-medium">{user.full_name}</p>
             <p className="truncate text-xs text-muted-foreground">{user.email}</p>
@@ -131,18 +125,6 @@ export function UserProfileMenu() {
             <UserRound className="size-4 text-muted-foreground" aria-hidden />
             Profile Settings
           </Link>
-          {/* <button
-            type="button"
-            role="menuitem"
-            className={cn(menuItemClass, "text-muted-foreground")}
-            disabled
-          >
-            <Settings className="size-4" aria-hidden />
-            Settings
-            <span className="ml-auto rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium">
-              Soon
-            </span>
-          </button> */}
           <div className="my-1 border-t border-border" />
           <button
             type="button"
@@ -157,7 +139,7 @@ export function UserProfileMenu() {
             Sign out
           </button>
         </div>
-      ) : null}
+      </FloatingMenuPortal>
     </div>
   );
 }

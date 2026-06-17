@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Check, Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/providers/theme-provider";
+import { FloatingMenuPortal } from "@/components/ui/floating-menu";
 import { cn } from "@/lib/utils";
 
 const menuItemClass =
@@ -17,22 +18,14 @@ const options: { value: "light" | "dark" | "system"; label: string; Icon: typeof
 export function ThemeToggle() {
   const { mode, setMode } = useTheme();
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const TriggerIcon = mode === "dark" ? Moon : mode === "light" ? Sun : Monitor;
 
   return (
-    <div className="relative shrink-0" ref={ref}>
+    <div className="relative shrink-0">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
@@ -46,12 +39,13 @@ export function ThemeToggle() {
         <TriggerIcon className="size-[1.125rem]" aria-hidden />
       </button>
 
-      {open ? (
-        <div
-          className="absolute right-0 top-full z-50 mt-2 w-44 rounded-xl border border-border bg-card py-1 shadow-lg"
-          role="menu"
-          aria-orientation="vertical"
-        >
+      <FloatingMenuPortal
+        open={open}
+        anchorRef={triggerRef}
+        onClose={() => setOpen(false)}
+        className="w-44 rounded-xl border border-border bg-card py-1 shadow-lg"
+      >
+        <div role="menu" aria-orientation="vertical">
           <p className="px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Appearance
           </p>
@@ -79,7 +73,7 @@ export function ThemeToggle() {
             </button>
           ))}
         </div>
-      ) : null}
+      </FloatingMenuPortal>
     </div>
   );
 }

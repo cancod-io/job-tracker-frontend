@@ -1,5 +1,5 @@
-import { authRequestHeaders } from "@/lib/auth-token";
-import { assertOkResponse, fetchWithTimeout } from "@/lib/http";
+import { fetchAuthed } from "@/lib/auth-session";
+import { assertOkResponse } from "@/lib/http";
 import type { ApiJobListResponse, ApiJobSourcesResponse, FetchJobsListParams } from "@/types/api-jobs";
 
 function appendJobsQueryParams(search: URLSearchParams, params: FetchJobsListParams): void {
@@ -25,10 +25,7 @@ function appendJobsQueryParams(search: URLSearchParams, params: FetchJobsListPar
 }
 
 export async function fetchJobSources(): Promise<string[]> {
-  const res = await fetchWithTimeout("/api/v1/jobs/sources", {
-    headers: authRequestHeaders(),
-    credentials: "omit",
-  });
+  const res = await fetchAuthed("/api/v1/jobs/sources");
 
   await assertOkResponse(res, "Could not load job sources.");
 
@@ -41,10 +38,7 @@ export async function fetchJobsList(params: FetchJobsListParams = {}): Promise<A
   appendJobsQueryParams(search, params);
 
   /** Same-origin Next route proxies to the real API — avoids browser CORS for any dev host/IP. */
-  const res = await fetchWithTimeout(`/api/v1/jobs?${search.toString()}`, {
-    headers: authRequestHeaders(),
-    credentials: "omit",
-  });
+  const res = await fetchAuthed(`/api/v1/jobs?${search.toString()}`);
 
   await assertOkResponse(res, "Could not load jobs.");
 

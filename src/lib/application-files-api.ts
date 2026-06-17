@@ -1,10 +1,10 @@
-import { authRequestHeaders } from "@/lib/auth-token";
 import {
   formatFileSize,
   isAllowedApplicationFile,
   validateApplicationFile,
 } from "@/lib/application-file-utils";
-import { assertOkResponse, fetchWithTimeout, readApiErrorMessage } from "@/lib/http";
+import { fetchAuthed } from "@/lib/auth-session";
+import { assertOkResponse, readApiErrorMessage } from "@/lib/http";
 import type {
   ApiApplicationFile,
   ApiApplicationFilesListResponse,
@@ -40,13 +40,8 @@ function parseFilesList(data: unknown): ApiApplicationFile[] {
 }
 
 export async function fetchApplicationFiles(applicationId: number): Promise<ApiApplicationFile[]> {
-  const res = await fetchWithTimeout(`/api/v1/applications/${applicationId}/files`, {
-    headers: authRequestHeaders(),
-    credentials: "omit",
-  });
-
+  const res = await fetchAuthed(`/api/v1/applications/${applicationId}/files`);
   await assertOkResponse(res, "Could not load attachments.");
-
   const data = await res.json();
   return parseFilesList(data);
 }
@@ -63,19 +58,16 @@ export async function uploadApplicationFile(
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await fetchWithTimeout(
+  const res = await fetchAuthed(
     `/api/v1/applications/${applicationId}/files`,
     {
       method: "POST",
-      headers: authRequestHeaders(),
-      credentials: "omit",
       body: formData,
     },
     UPLOAD_TIMEOUT_MS,
   );
 
   await assertOkResponse(res, "Could not upload file.");
-
   return normalizeFile((await res.json()) as ApiApplicationFile);
 }
 
@@ -83,23 +75,15 @@ export async function fetchApplicationFile(
   applicationId: number,
   fileId: number,
 ): Promise<ApiApplicationFile> {
-  const res = await fetchWithTimeout(`/api/v1/applications/${applicationId}/files/${fileId}`, {
-    headers: authRequestHeaders(),
-    credentials: "omit",
-  });
-
+  const res = await fetchAuthed(`/api/v1/applications/${applicationId}/files/${fileId}`);
   await assertOkResponse(res, "Could not load file details.");
-
   return normalizeFile((await res.json()) as ApiApplicationFile);
 }
 
 export async function deleteApplicationFile(applicationId: number, fileId: number): Promise<void> {
-  const res = await fetchWithTimeout(`/api/v1/applications/${applicationId}/files/${fileId}`, {
+  const res = await fetchAuthed(`/api/v1/applications/${applicationId}/files/${fileId}`, {
     method: "DELETE",
-    headers: authRequestHeaders(),
-    credentials: "omit",
   });
-
   await assertOkResponse(res, "Could not delete file.");
 }
 
@@ -127,12 +111,9 @@ export async function fetchApplicationFileBlob(
   applicationId: number,
   file: ApiApplicationFile,
 ): Promise<ApplicationFileBlob> {
-  const res = await fetchWithTimeout(
+  const res = await fetchAuthed(
     `/api/v1/applications/${applicationId}/files/${file.id}/download`,
-    {
-      headers: authRequestHeaders(),
-      credentials: "omit",
-    },
+    {},
     DOWNLOAD_TIMEOUT_MS,
   );
 
