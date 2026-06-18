@@ -27,6 +27,7 @@ import { AddApplicationModal } from "@/components/applications/add-application-m
 import { NotesModal } from "@/components/applications/notes-modal";
 import { NotesPreviewModal } from "@/components/applications/notes-preview-modal";
 import { ApplicationDetailModal } from "@/components/applications/application-detail-modal";
+import { DeleteApplicationModal } from "@/components/applications/delete-application-modal";
 import { SearchInput } from "@/components/ui/search-input";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import type { ApiApplication, ApiApplicationStatus } from "@/types/application";
@@ -67,6 +68,8 @@ export function KanbanBoard() {
   const [editingNotes, setEditingNotes] = useState<ApiApplication | null>(null);
   const [previewingNotes, setPreviewingNotes] = useState<ApiApplication | null>(null);
   const [detailApp, setDetailApp] = useState<ApiApplication | null>(null);
+  const [deletingApp, setDeletingApp] = useState<ApiApplication | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [addingApp, setAddingApp] = useState(false);
   const [viewMode, setViewModeState] = useState<ApplicationsViewMode>("kanban");
   const [listStatusFilter, setListStatusFilter] = useState<ApplicationListStatusFilter>("all");
@@ -169,18 +172,23 @@ export function KanbanBoard() {
     [updateStatus],
   );
 
-  const handleDelete = useCallback(
-    async (app: ApiApplication) => {
-      if (!window.confirm(`Remove application for ${jobTitle(app)}?`)) return;
-      try {
-        await removeApplication(app.id);
-        notify.success("Application removed.");
-      } catch (err) {
-        notify.error(err instanceof Error ? err.message : "Failed to remove.");
-      }
-    },
-    [removeApplication],
-  );
+  const requestDelete = useCallback((app: ApiApplication) => {
+    setDeletingApp(app);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deletingApp) return;
+    setDeleting(true);
+    try {
+      await removeApplication(deletingApp.id);
+      notify.success("Application removed.");
+      setDeletingApp(null);
+    } catch (err) {
+      notify.error(err instanceof Error ? err.message : "Failed to remove.");
+    } finally {
+      setDeleting(false);
+    }
+  }, [deletingApp, removeApplication]);
 
   const handleSaveNotes = useCallback(
     async (notes: string) => {
@@ -379,7 +387,7 @@ export function KanbanBoard() {
               onCardClick={setDetailApp}
               onNotesPreview={setPreviewingNotes}
               onEditNotes={setEditingNotes}
-              onDelete={handleDelete}
+              onDelete={requestDelete}
               sortKey={columnSorts[col.id] ?? DEFAULT_SORT}
               onSortChange={(key) => setColumnSorts((prev) => ({ ...prev, [col.id]: key }))}
               dateFrom={columnDates[col.id]?.from ?? ""}
@@ -400,7 +408,7 @@ export function KanbanBoard() {
           onOpen={setDetailApp}
           onNotesPreview={setPreviewingNotes}
           onEditNotes={setEditingNotes}
-          onDelete={handleDelete}
+          onDelete={requestDelete}
           onMoveToColumn={handleMoveToColumn}
         />
       ) : null}
@@ -411,7 +419,10 @@ export function KanbanBoard() {
           application={detailApp}
           onClose={() => setDetailApp(null)}
           onEditNotes={(app) => { setDetailApp(null); setEditingNotes(app); }}
-          onDelete={(app) => { setDetailApp(null); void handleDelete(app); }}
+          onDelete={(app) => {
+            setDetailApp(null);
+            requestDelete(app);
+          }}
           onMoveToColumn={handleMoveToColumn}
         />
       ) : null}
@@ -436,6 +447,18 @@ export function KanbanBoard() {
         <AddApplicationModal
           onClose={() => setAddingApp(false)}
           onAdd={handleAddApplication}
+        />
+      ) : null}
+
+      {deletingApp ? (
+        <DeleteApplicationModal
+          application={deletingApp}
+          onClose={() => {
+            if (deleting) return;
+            setDeletingApp(null);
+          }}
+          onConfirm={handleConfirmDelete}
+          deleting={deleting}
         />
       ) : null}
 

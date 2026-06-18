@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { applicationFilePreviewKind, formatFileSize } from "@/lib/application-file-utils";
+import { formatFileSize, prepareBlobFilePreview } from "@/lib/application-file-utils";
 import { downloadApplicationFile, fetchApplicationFileBlob } from "@/lib/application-files-api";
 import { FilePreviewModal, type FilePreviewKind } from "@/components/files/file-preview-modal";
 import type { ApiApplicationFile } from "@/types/application-file";
@@ -20,54 +20,50 @@ export function ApplicationFilePreviewModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewText, setPreviewText] = useState<string | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewKind, setPreviewKind] = useState<FilePreviewKind | null>(null);
 
   useEffect(() => {
+    function clearPreview() {
+      setPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+      setPreviewText(null);
+      setPreviewHtml(null);
+      setPreviewKind(null);
+    }
+
     if (!file) {
       setLoading(false);
       setError(null);
-      setPreviewKind(null);
-      setPreviewUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return null;
-      });
-      return;
-    }
-
-    const kind = applicationFilePreviewKind(file);
-    if (kind === "none") {
-      setLoading(false);
-      setError(null);
-      setPreviewKind(null);
-      setPreviewUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return null;
-      });
+      clearPreview();
       return;
     }
 
     let cancelled = false;
     setLoading(true);
     setError(null);
-    setPreviewKind(kind);
+    clearPreview();
 
     void (async () => {
       try {
         const { blob } = await fetchApplicationFileBlob(applicationId, file);
         if (cancelled) return;
-        const url = URL.createObjectURL(blob);
-        setPreviewUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return url;
-        });
+        const prepared = await prepareBlobFilePreview(blob, file.filename, file.content_type);
+        if (cancelled) {
+          URL.revokeObjectURL(prepared.url);
+          return;
+        }
+        setPreviewKind(prepared.kind);
+        setPreviewUrl(prepared.url || null);
+        setPreviewText(prepared.text);
+        setPreviewHtml(prepared.html);
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "Could not preview file.");
-        setPreviewKind(null);
-        setPreviewUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return null;
-        });
+        clearPreview();
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -93,6 +89,8 @@ export function ApplicationFilePreviewModal({
       error={error}
       previewKind={previewKind}
       previewUrl={previewUrl}
+      previewText={previewText}
+      previewHtml={previewHtml}
       onDownload={() => {
         if (file) void downloadApplicationFile(applicationId, file);
       }}

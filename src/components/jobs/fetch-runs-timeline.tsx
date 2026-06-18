@@ -152,7 +152,7 @@ export function FetchRunsTimeline({
       </div>
 
       {loading ? (
-        <div className="flex gap-3 overflow-x-auto pb-1">
+        <div className="scrollbar-thin flex gap-3 overflow-x-auto pb-2">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={`fetch-run-skel-${i}`} className="h-[7.5rem] min-w-[11.5rem] shrink-0 rounded-xl" />
           ))}
@@ -160,7 +160,7 @@ export function FetchRunsTimeline({
       ) : runs.length === 0 ? (
         <p className="text-sm text-muted-foreground">No fetch runs for this source yet.</p>
       ) : (
-        <div className="flex gap-3 overflow-x-auto pb-1">
+        <div className="scrollbar-thin flex gap-3 overflow-x-auto pb-2">
           {runs.map((run) => (
             <FetchRunCard
               key={run.id}
