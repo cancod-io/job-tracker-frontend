@@ -1,6 +1,18 @@
 import { fetchAuthed } from "@/lib/auth-session";
+import { dateKeyToPostedFromUtc, dateKeyToPostedToUtc, isDateKey } from "@/lib/date-utils";
 import { assertOkResponse } from "@/lib/http";
 import type { ApiJobListResponse, ApiJobSourcesResponse, FetchJobsListParams } from "@/types/api-jobs";
+
+function appendPostedDateRange(
+  search: URLSearchParams,
+  postedFrom?: string,
+  postedTo?: string,
+): void {
+  const from = postedFrom?.trim();
+  const to = postedTo?.trim();
+  if (from && isDateKey(from)) search.set("posted_from", dateKeyToPostedFromUtc(from));
+  if (to && isDateKey(to)) search.set("posted_to", dateKeyToPostedToUtc(to));
+}
 
 function appendJobsQueryParams(search: URLSearchParams, params: FetchJobsListParams): void {
   const limit = params.limit ?? 20;
@@ -27,6 +39,8 @@ function appendJobsQueryParams(search: URLSearchParams, params: FetchJobsListPar
     search.set("fetch_run_id", String(params.fetch_run_id));
   }
   if (params.fetch_change) search.set("fetch_change", params.fetch_change);
+
+  appendPostedDateRange(search, params.posted_from, params.posted_to);
 }
 
 export async function fetchJobSources(): Promise<string[]> {

@@ -63,7 +63,7 @@ function FetchRunCard({
           : "border-border bg-card hover:border-primary/30 hover:bg-muted/40",
       )}
     >
-      <div className="flex items-start justify-between gap-2">
+      {/* <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-xs font-semibold text-foreground">
             {relativeDate(run.started_at)}
@@ -82,7 +82,7 @@ function FetchRunCard({
             Initial
           </span>
         ) : null}
-      </div>
+      </div> */}
 
       <div className="flex flex-wrap items-center gap-1">
         <RunCountPill
@@ -152,7 +152,7 @@ export function FetchRunsTimeline({
       </div>
 
       {loading ? (
-        <div className="flex gap-3 overflow-x-auto pb-1">
+        <div className="scrollbar-thin flex gap-3 overflow-x-auto pb-2">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={`fetch-run-skel-${i}`} className="h-[7.5rem] min-w-[11.5rem] shrink-0 rounded-xl" />
           ))}
@@ -160,7 +160,7 @@ export function FetchRunsTimeline({
       ) : runs.length === 0 ? (
         <p className="text-sm text-muted-foreground">No fetch runs for this source yet.</p>
       ) : (
-        <div className="flex gap-3 overflow-x-auto pb-1">
+        <div className="scrollbar-thin flex gap-3 overflow-x-auto pb-2">
           {runs.map((run) => (
             <FetchRunCard
               key={run.id}

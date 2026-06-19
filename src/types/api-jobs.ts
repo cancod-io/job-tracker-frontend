@@ -117,6 +117,9 @@ export type FetchJobsListParams = {
   /** Filter jobs by fetch diff — requires `source`. Omit `fetch_run_id` for latest run. */
   fetch_run_id?: number;
   fetch_change?: ApiFetchChangeType;
+  /** Inclusive posted-at range (`YYYY-MM-DD` keys converted to UTC ISO before send). */
+  posted_from?: string;
+  posted_to?: string;
 };
 
 export type ApiJobSourcesResponse = {

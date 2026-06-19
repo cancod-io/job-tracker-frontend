@@ -15,6 +15,8 @@ type UseJobsListQueryParams = {
   query: string;
   fetchRunId: number | null;
   fetchChange: ApiFetchChangeType | null;
+  postedFrom: string;
+  postedTo: string;
 };
 
 type JobsListQueryData = {
@@ -30,6 +32,8 @@ export function useJobsListQuery({
   query,
   fetchRunId,
   fetchChange,
+  postedFrom,
+  postedTo,
 }: UseJobsListQueryParams) {
   const trimmedSource = source.trim();
   const inDiffMode = Boolean(trimmedSource && fetchChange);
@@ -44,6 +48,8 @@ export function useJobsListQuery({
       query,
       fetchRunId,
       fetchChange,
+      postedFrom,
+      postedTo,
     ],
     placeholderData: keepPreviousData,
     queryFn: async () => {
@@ -58,6 +64,8 @@ export function useJobsListQuery({
         q: query.trim() || undefined,
         fetch_run_id: inDiffMode && fetchRunId != null ? fetchRunId : undefined,
         fetch_change: inDiffMode ? fetchChange ?? undefined : undefined,
+        posted_from: postedFrom || undefined,
+        posted_to: postedTo || undefined,
       });
       return {
         total: data.total,

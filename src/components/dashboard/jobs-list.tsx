@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { notify } from "@/lib/notify";
+import { formatPostedDateRange, normalizePostedDateRange } from "@/lib/date-utils";
 import { readJobsViewMode, writeJobsViewMode } from "@/lib/jobs-view-mode";
 import { cn } from "@/lib/utils";
 import { useJobFiltersStore } from "@/store/job-filters";
@@ -69,6 +70,8 @@ function matchesClientFilters(
 function renderEmptyStateMessage(args: {
   query: string;
   source: string;
+  postedFrom: string;
+  postedTo: string;
   fetchChange: ApiFetchChangeType | null;
   hasClientFilters: boolean;
   total: number;
@@ -76,8 +79,12 @@ function renderEmptyStateMessage(args: {
 }): string {
   const trimmed = args.query.trim();
   const sourceLabel = args.source.trim();
+  const hasPostedRange = Boolean(args.postedFrom || args.postedTo);
   if (args.fetchChange && args.total === 0) {
     return `No ${args.fetchChange} jobs in this fetch run. Try another change type or run.`;
+  }
+  if (hasPostedRange && args.total === 0) {
+    return `No jobs posted ${formatPostedDateRange(args.postedFrom, args.postedTo).toLowerCase()}. Try widening the date range.`;
   }
   // Search returned zero hits from the server.
   if (trimmed && args.total === 0) {
@@ -118,8 +125,18 @@ export function JobsList() {
   const pathname = usePathname();
 
   // ── URL state ─────────────────────────────────────────────────────────────
-  const { page, sortBy, source, perPage, fetchRunId, fetchChange, searchParamsKey } =
-    useJobsListUrlState();
+  const {
+    page,
+    sortBy,
+    source,
+    perPage,
+    fetchRunId,
+    fetchChange,
+    searchParamsKey,
+  } = useJobsListUrlState();
+
+  const [postedFrom, setPostedFrom] = useState("");
+  const [postedTo, setPostedTo] = useState("");
 
   const jobSourcesQuery = useJobSourcesQuery();
   const fetchRunsQuery = useFetchRunsQuery({ source });
@@ -209,6 +226,8 @@ export function JobsList() {
     query: debouncedQuery,
     fetchRunId,
     fetchChange,
+    postedFrom,
+    postedTo,
   });
   const total = jobsQuery.data?.total ?? 0;
   const loading = jobsQuery.isPending;
@@ -278,9 +297,21 @@ export function JobsList() {
     }) => {
       scrollToPageTop();
       const sp = new URLSearchParams(searchParamsKey);
-      router.push(buildJobsListHref(pathname, sp, patch), { scroll: false });
+      router.replace(buildJobsListHref(pathname, sp, patch), { scroll: false });
     },
     [pathname, router, searchParamsKey],
+  );
+
+  const handlePostedDateChange = useCallback(
+    (from: string, to: string) => {
+      const range = normalizePostedDateRange(from, to);
+      setPostedFrom(range.from);
+      setPostedTo(range.to);
+      if (page !== 1) {
+        navigateList({ page: 1 });
+      }
+    },
+    [navigateList, page],
   );
 
   const activeFetchRun = useMemo(() => {
@@ -310,7 +341,7 @@ export function JobsList() {
     // Identity of `closeDetail` & `visibleJobs` would re-fire this on every render;
     // we only want to fire on the inputs that change the result set.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedQuery, page, perPage, sortBy, source, fetchRunId, fetchChange, experience, jobType]);
+  }, [debouncedQuery, page, perPage, sortBy, source, fetchRunId, fetchChange, postedFrom, postedTo, experience, jobType]);
 
   // ── Apply flow ────────────────────────────────────────────────────────────
   const {
@@ -352,6 +383,9 @@ export function JobsList() {
         }
         sourceOptions={sourceOptions}
         sourcesLoading={jobSourcesQuery.isPending}
+        postedFrom={postedFrom}
+        postedTo={postedTo}
+        onPostedDateChange={handlePostedDateChange}
       />
 
       {source ? (
@@ -418,6 +452,8 @@ export function JobsList() {
             {renderEmptyStateMessage({
               query: debouncedQuery,
               source,
+              postedFrom,
+              postedTo,
               fetchChange,
               hasClientFilters: experience !== "All" || jobType !== "All",
               total,

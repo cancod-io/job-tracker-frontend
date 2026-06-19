@@ -225,7 +225,7 @@ export function ApplicationDetailModal({
         <div className="flex items-center justify-between gap-3 border-t border-border/60 px-6 py-4">
           <button
             type="button"
-            onClick={() => { onDelete(app); onClose(); }}
+            onClick={() => onDelete(app)}
             className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:border-rose-500/20 dark:text-rose-400 dark:hover:bg-rose-500/10"
           >
             <Trash2 className="size-3.5 shrink-0" aria-hidden />

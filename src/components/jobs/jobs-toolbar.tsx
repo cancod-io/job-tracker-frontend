@@ -3,6 +3,7 @@
 import { LayoutGrid, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SearchInput } from "@/components/ui/search-input";
+import { JobsDateRangeFilter } from "@/components/jobs/jobs-date-range-filter";
 import { formatJobSourceLabel } from "@/components/jobs/job-source-badge";
 import { ALL_JOB_SOURCES_VALUE } from "@/components/jobs/types";
 import { API_JOBS_SORT_BY, jobsSortByLabel } from "@/types/api-jobs";
@@ -21,6 +22,9 @@ type JobsToolbarProps = {
   onSourceChange: (source: string) => void;
   sourceOptions: string[];
   sourcesLoading?: boolean;
+  postedFrom: string;
+  postedTo: string;
+  onPostedDateChange: (from: string, to: string) => void;
 };
 
 /**
@@ -37,6 +41,9 @@ export function JobsToolbar({
   onSourceChange,
   sourceOptions,
   sourcesLoading = false,
+  postedFrom,
+  postedTo,
+  onPostedDateChange,
 }: JobsToolbarProps) {
   const { query, setQuery } = useJobFiltersStore();
 
@@ -89,6 +96,12 @@ export function JobsToolbar({
             ))}
           </select>
         </div>
+
+        <JobsDateRangeFilter
+          from={postedFrom}
+          to={postedTo}
+          onChange={onPostedDateChange}
+        />
 
         <div className="flex min-w-0 flex-col gap-1.5">
           <label htmlFor="jobs-sort-by" className="sr-only">
