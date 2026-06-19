@@ -63,7 +63,7 @@ function FetchRunCard({
           : "border-border bg-card hover:border-primary/30 hover:bg-muted/40",
       )}
     >
-      <div className="flex items-start justify-between gap-2">
+      {/* <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-xs font-semibold text-foreground">
             {relativeDate(run.started_at)}
@@ -82,7 +82,7 @@ function FetchRunCard({
             Initial
           </span>
         ) : null}
-      </div>
+      </div> */}
 
       <div className="flex flex-wrap items-center gap-1">
         <RunCountPill

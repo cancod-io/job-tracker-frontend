@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/date-utils";
 import { downloadCv } from "@/lib/profile-api";
 import { useCvsQuery, useDeleteCvMutation, useUploadCvMutation } from "@/hooks/use-profile";
-import { CV_ACCEPT, CV_MAX_BYTES, validateCvFile } from "@/lib/profile-file-utils";
+import { canPreviewCv, CV_ACCEPT, CV_MAX_BYTES, validateCvFile } from "@/lib/profile-file-utils";
 import { formatFileSize } from "@/lib/application-file-utils";
 import { Spinner } from "@/components/ui/spinner";
 import { ErrorAlert } from "@/components/ui/error-alert";
@@ -152,13 +152,17 @@ export function CvListSection() {
                           <FileText className="size-4" aria-hidden />
                         </div>
                         <div className="min-w-0">
-                          <button
-                            type="button"
-                            onClick={() => setPreviewCv(cv)}
-                            className="block max-w-full truncate text-left font-medium text-foreground transition-colors hover:text-primary hover:underline"
-                          >
-                            {cv.filename}
-                          </button>
+                          {canPreviewCv(cv) ? (
+                            <button
+                              type="button"
+                              onClick={() => setPreviewCv(cv)}
+                              className="block max-w-full truncate text-left font-medium text-foreground transition-colors hover:text-primary hover:underline"
+                            >
+                              {cv.filename}
+                            </button>
+                          ) : (
+                            <p className="truncate font-medium text-foreground">{cv.filename}</p>
+                          )}
                           <p className="text-[11px] text-muted-foreground sm:hidden">
                             {formatDate(cv.created_at)} · {formatFileSize(cv.size_bytes)}
                           </p>
@@ -173,14 +177,16 @@ export function CvListSection() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setPreviewCv(cv)}
-                          className="inline-flex size-9 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                          aria-label={`Preview ${cv.filename}`}
-                        >
-                          <Eye className="size-4" aria-hidden />
-                        </button>
+                        {canPreviewCv(cv) ? (
+                          <button
+                            type="button"
+                            onClick={() => setPreviewCv(cv)}
+                            className="inline-flex size-9 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                            aria-label={`Preview ${cv.filename}`}
+                          >
+                            <Eye className="size-4" aria-hidden />
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => void handleDownload(cv)}

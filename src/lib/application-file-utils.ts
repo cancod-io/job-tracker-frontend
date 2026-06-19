@@ -2,11 +2,6 @@ import type { LucideIcon } from "lucide-react";
 import { File, FileImage, FileText } from "lucide-react";
 import type { ApiApplicationFile } from "@/types/application-file";
 
-const MAX_TEXT_PREVIEW_BYTES = 512 * 1024;
-
-const TEXT_EXTENSION_RE =
-  /\.(txt|csv|md|json|xml|html?|css|js|mjs|cjs|ts|tsx|jsx|log|yaml|yml|svg|sql|env)$/i;
-
 export const APPLICATION_FILE_ACCEPT = ".pdf,.doc,.docx,.zip,image/*";
 export const MAX_APPLICATION_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
@@ -53,106 +48,20 @@ export function applicationFileUploaderLabel(file: ApiApplicationFile): string |
   return raw || null;
 }
 
-export type FilePreviewKind = "image" | "pdf" | "text" | "video" | "audio" | "docx" | "embed";
+export type ApplicationFilePreviewKind = "image" | "pdf" | "none";
 
-/** @deprecated Use `FilePreviewKind`. */
-export type ApplicationFilePreviewKind = FilePreviewKind;
-
-export function resolveFilePreviewKind(
-  filename: string,
-  contentType?: string | null,
-): FilePreviewKind {
-  const type = contentType?.toLowerCase() ?? "";
-  const name = filename.toLowerCase();
-
-  if (type.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|ico|svg|avif)$/.test(name)) {
+export function applicationFilePreviewKind(file: ApiApplicationFile): ApplicationFilePreviewKind {
+  const type = file.content_type?.toLowerCase() ?? "";
+  const name = file.filename.toLowerCase();
+  if (type.startsWith("image/") || /\.(png|jpe?g|gif|webp|svg|bmp)$/.test(name)) {
     return "image";
   }
   if (type.includes("pdf") || name.endsWith(".pdf")) {
     return "pdf";
   }
-  if (type.startsWith("video/") || /\.(mp4|webm|ogv|mov|m4v)$/.test(name)) {
-    return "video";
-  }
-  if (type.startsWith("audio/") || /\.(mp3|wav|ogg|m4a|aac|flac|opus)$/.test(name)) {
-    return "audio";
-  }
-  if (
-    type.startsWith("text/") ||
-    type === "application/json" ||
-    type === "application/xml" ||
-    type === "application/javascript" ||
-    TEXT_EXTENSION_RE.test(name)
-  ) {
-    return "text";
-  }
-  return "embed";
+  return "none";
 }
 
-export function isDocxFile(filename: string, contentType?: string | null): boolean {
-  const type = contentType?.toLowerCase() ?? "";
-  const name = filename.toLowerCase();
-  return (
-    name.endsWith(".docx") ||
-    type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-  );
-}
-
-export function applicationFilePreviewKind(file: ApiApplicationFile): FilePreviewKind {
-  return resolveFilePreviewKind(file.filename, file.content_type);
-}
-
-export function canPreviewApplicationFile(_file: ApiApplicationFile): boolean {
-  return true;
-}
-
-export type PreparedFilePreview = {
-  kind: FilePreviewKind;
-  url: string;
-  text: string | null;
-  html: string | null;
-};
-
-export async function prepareBlobFilePreview(
-  blob: Blob,
-  filename: string,
-  contentType?: string | null,
-): Promise<PreparedFilePreview> {
-  if (isDocxFile(filename, contentType)) {
-    try {
-      const arrayBuffer = await blob.arrayBuffer();
-      const mammoth = await import("mammoth");
-      const { value: html } = await mammoth.convertToHtml({ arrayBuffer });
-      if (!html.trim()) {
-        throw new Error("Document is empty.");
-      }
-      return { kind: "docx", url: "", text: null, html };
-    } catch {
-      return {
-        kind: "embed",
-        url: URL.createObjectURL(blob),
-        text: null,
-        html: null,
-      };
-    }
-  }
-
-  let kind = resolveFilePreviewKind(filename, contentType);
-  const url = URL.createObjectURL(blob);
-  let text: string | null = null;
-
-  if (kind === "text") {
-    try {
-      if (blob.size > MAX_TEXT_PREVIEW_BYTES) {
-        const slice = blob.slice(0, MAX_TEXT_PREVIEW_BYTES);
-        text = `${await slice.text()}\n\n… preview truncated (${formatFileSize(blob.size)} total)`;
-      } else {
-        text = await blob.text();
-      }
-    } catch {
-      kind = "embed";
-    }
-  }
-
-  return { kind, url, text, html: null };
+export function canPreviewApplicationFile(file: ApiApplicationFile): boolean {
+  return applicationFilePreviewKind(file) !== "none";
 }

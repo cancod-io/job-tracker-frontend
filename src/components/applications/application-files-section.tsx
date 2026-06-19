@@ -8,6 +8,7 @@ import {
   APPLICATION_FILE_ACCEPT,
   applicationFileIcon,
   applicationFileUploaderLabel,
+  canPreviewApplicationFile,
   formatFileSize,
   MAX_APPLICATION_FILE_SIZE_BYTES,
 } from "@/lib/application-file-utils";
@@ -38,6 +39,7 @@ function FileRow({
 }) {
   const Icon = applicationFileIcon(file);
   const uploader = applicationFileUploaderLabel(file);
+  const previewable = canPreviewApplicationFile(file);
 
   return (
     <li
@@ -55,20 +57,26 @@ function FileRow({
         <Icon className={compact ? "size-3.5" : "size-4"} aria-hidden />
       </div>
       <div className="min-w-0 flex-1">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onPreview();
-          }}
-          className={cn(
-            "block max-w-full truncate text-left font-medium text-foreground underline-offset-2 hover:text-primary hover:underline",
-            compact ? "text-[11px]" : "text-sm",
-          )}
-          title={`Preview ${file.filename}`}
-        >
-          {file.filename}
-        </button>
+        {previewable ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPreview();
+            }}
+            className={cn(
+              "block max-w-full truncate text-left font-medium text-foreground underline-offset-2 hover:text-primary hover:underline",
+              compact ? "text-[11px]" : "text-sm",
+            )}
+            title={`Preview ${file.filename}`}
+          >
+            {file.filename}
+          </button>
+        ) : (
+          <p className={cn("truncate font-medium text-foreground", compact ? "text-[11px]" : "text-sm")}>
+            {file.filename}
+          </p>
+        )}
         <p className={cn("text-muted-foreground", compact ? "text-[10px]" : "text-[11px]")}>
           {formatFileSize(file.size_bytes)}
           {file.created_at ? ` · ${formatDate(file.created_at)}` : null}
@@ -76,21 +84,23 @@ function FileRow({
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-0.5">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onPreview();
-          }}
-          disabled={busy}
-          className={cn(
-            "inline-flex items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60",
-            compact ? "size-7" : "size-8",
-          )}
-          aria-label={`Preview ${file.filename}`}
-        >
-          <Eye className={compact ? "size-3" : "size-3.5"} aria-hidden />
-        </button>
+        {previewable ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPreview();
+            }}
+            disabled={busy}
+            className={cn(
+              "inline-flex items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60",
+              compact ? "size-7" : "size-8",
+            )}
+            aria-label={`Preview ${file.filename}`}
+          >
+            <Eye className={compact ? "size-3" : "size-3.5"} aria-hidden />
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={(e) => {
@@ -218,7 +228,7 @@ export function ApplicationFilesPanel({
 
       {!compact ? (
         <p className="mb-3 text-xs text-muted-foreground">
-          PDF, DOCX, images, or ZIP up to {formatFileSize(MAX_APPLICATION_FILE_SIZE_BYTES)}. All file types can be previewed when supported by your browser.
+          PDF, DOCX, images, or ZIP up to {formatFileSize(MAX_APPLICATION_FILE_SIZE_BYTES)}. PDFs and images can be previewed.
         </p>
       ) : null}
 

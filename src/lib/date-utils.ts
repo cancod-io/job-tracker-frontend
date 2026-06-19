@@ -51,6 +51,26 @@ export function parseDateKey(key: string): Date | null {
   return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
 }
 
+/** True when `key` is a `YYYY-MM-DD` calendar date. */
+export function isDateKey(key: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(key);
+}
+
+/**
+ * `2026-06-01` → `2026-06-01T00:00:00Z` for the jobs API `posted_from` param.
+ * Calendar dates are interpreted as UTC days.
+ */
+export function dateKeyToPostedFromUtc(key: string): string {
+  return `${key}T00:00:00Z`;
+}
+
+/**
+ * `2026-06-17` → `2026-06-17T23:59:59Z` for an inclusive jobs API `posted_to` param.
+ */
+export function dateKeyToPostedToUtc(key: string): string {
+  return `${key}T23:59:59Z`;
+}
+
 /** Formats a "YYYY-MM-DD" key for display, e.g. "May 1, 2026". */
 export function formatDateKey(key: string): string {
   const d = parseDateKey(key);
@@ -67,6 +87,26 @@ export function formatDateRange(from: string, to: string): string {
   if (!from && to) return `Until ${formatDateKey(to)}`;
   if (from === to) return formatDateKey(from);
   return `${formatDateKey(from)} – ${formatDateKey(to)}`;
+}
+
+/** Jobs board toolbar label — shows "Posted date" when no range is selected. */
+export function formatPostedDateRange(from: string, to: string): string {
+  if (!from && !to) return "Posted date";
+  return formatDateRange(from, to);
+}
+
+/**
+ * Ensures a single-day or open-ended picker selection becomes a closed range
+ * before sending `posted_from` / `posted_to` to the API.
+ */
+export function normalizePostedDateRange(from: string, to: string): { from: string; to: string } {
+  const start = from.trim();
+  const end = to.trim();
+  if (!start && !end) return { from: "", to: "" };
+  if (start && !end) return { from: start, to: start };
+  if (!start && end) return { from: end, to: end };
+  if (start > end) return { from: end, to: start };
+  return { from: start, to: end };
 }
 
 /**

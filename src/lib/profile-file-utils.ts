@@ -1,6 +1,6 @@
-import { formatFileSize, resolveFilePreviewKind } from "@/lib/application-file-utils";
+import { formatFileSize } from "@/lib/application-file-utils";
 
-export { formatFileSize, resolveFilePreviewKind };
+export { formatFileSize };
 
 export const AVATAR_ACCEPT = "image/jpeg,image/png,image/gif,image/webp";
 export const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
@@ -26,18 +26,21 @@ export function validateAvatarFile(file: File): string | null {
   return null;
 }
 
-/** @deprecated Use `resolveFilePreviewKind`. */
-export type CvPreviewKind = ReturnType<typeof resolveFilePreviewKind>;
+/** Whether a CV can be previewed inline. Only PDFs render in the browser; DOC/DOCX cannot. */
+export type CvPreviewKind = "pdf" | "none";
 
 export function cvPreviewKind(cv: {
   content_type?: string | null;
   filename: string;
-}): ReturnType<typeof resolveFilePreviewKind> {
-  return resolveFilePreviewKind(cv.filename, cv.content_type);
+}): CvPreviewKind {
+  const type = cv.content_type?.toLowerCase() ?? "";
+  const name = cv.filename.toLowerCase();
+  if (type.includes("pdf") || name.endsWith(".pdf")) return "pdf";
+  return "none";
 }
 
-export function canPreviewCv(_cv: { content_type?: string | null; filename: string }): boolean {
-  return true;
+export function canPreviewCv(cv: { content_type?: string | null; filename: string }): boolean {
+  return cvPreviewKind(cv) === "pdf";
 }
 
 export function validateCvFile(file: File): string | null {
