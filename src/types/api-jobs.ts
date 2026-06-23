@@ -20,8 +20,10 @@ export type ApiJobListItem = {
   /** Legacy / alternate title field. */
   title?: string;
   company: string;
-  /** Upstream scrape / ingest source (e.g. `google_jobs`, `linkedin`). */
+  /** Upstream scrape / ingest source id (e.g. `fantastic_jobs`) — use for filtering. */
   source?: string | null;
+  /** Human-readable source label from the API — use for display. */
+  source_label?: string | null;
   location?: string | null;
   salary?: string | null;
   is_remote?: boolean;
@@ -122,6 +124,11 @@ export type FetchJobsListParams = {
   posted_to?: string;
 };
 
+export type JobSourceOption = {
+  id: string;
+  label: string;
+};
+
 export type ApiJobSourcesResponse = {
-  sources: string[];
+  sources: JobSourceOption[];
 };

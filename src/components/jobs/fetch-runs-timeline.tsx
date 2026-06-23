@@ -3,12 +3,12 @@
 import { History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { relativeDate } from "@/lib/date-utils";
-import { formatJobSourceLabel } from "@/components/jobs/job-source-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ApiFetchRun } from "@/types/api-fetch-runs";
 
 type FetchRunsTimelineProps = {
   source: string;
+  sourceLabel: string;
   runs: ApiFetchRun[];
   loading: boolean;
   selectedRunId: number | null;
@@ -116,6 +116,7 @@ function FetchRunCard({
 
 export function FetchRunsTimeline({
   source,
+  sourceLabel,
   runs,
   loading,
   selectedRunId,
@@ -123,12 +124,12 @@ export function FetchRunsTimeline({
   onClearDiff,
   diffActive,
 }: FetchRunsTimelineProps) {
-  const sourceLabel = formatJobSourceLabel(source);
+  const displaySourceLabel = sourceLabel.trim() || source;
 
   return (
     <section
       className="mb-4 rounded-2xl border border-border bg-muted/20 p-4"
-      aria-label={`Fetch history for ${sourceLabel}`}
+      aria-label={`Fetch history for ${displaySourceLabel}`}
     >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -136,7 +137,7 @@ export function FetchRunsTimeline({
           <div>
             <h3 className="text-sm font-semibold text-foreground">Fetch history</h3>
             <p className="text-xs text-muted-foreground">
-              {sourceLabel} — pick a run to compare changes
+              {displaySourceLabel} — pick a run to compare changes
             </p>
           </div>
         </div>

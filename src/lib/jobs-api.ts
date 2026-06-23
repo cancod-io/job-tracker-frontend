@@ -1,7 +1,7 @@
 import { fetchAuthed } from "@/lib/auth-session";
 import { dateKeyToPostedFromUtc, dateKeyToPostedToUtc, isDateKey } from "@/lib/date-utils";
 import { assertOkResponse } from "@/lib/http";
-import type { ApiJobListResponse, ApiJobSourcesResponse, FetchJobsListParams } from "@/types/api-jobs";
+import type { ApiJobListResponse, ApiJobSourcesResponse, FetchJobsListParams, JobSourceOption } from "@/types/api-jobs";
 
 function appendPostedDateRange(
   search: URLSearchParams,
@@ -43,13 +43,23 @@ function appendJobsQueryParams(search: URLSearchParams, params: FetchJobsListPar
   appendPostedDateRange(search, params.posted_from, params.posted_to);
 }
 
-export async function fetchJobSources(): Promise<string[]> {
+function parseJobSourceOption(raw: unknown): JobSourceOption | null {
+  if (!raw || typeof raw !== "object") return null;
+  const id = String((raw as { id?: unknown }).id ?? "").trim();
+  if (!id) return null;
+  const label = String((raw as { label?: unknown }).label ?? id).trim();
+  return { id, label: label || id };
+}
+
+export async function fetchJobSources(): Promise<JobSourceOption[]> {
   const res = await fetchAuthed("/api/v1/jobs/sources");
 
   await assertOkResponse(res, "Could not load job sources.");
 
   const data = (await res.json()) as ApiJobSourcesResponse;
-  return (data.sources ?? []).map((s) => String(s).trim()).filter(Boolean);
+  return (data.sources ?? [])
+    .map(parseJobSourceOption)
+    .filter((s): s is JobSourceOption => s !== null);
 }
 
 export async function fetchJobsList(params: FetchJobsListParams = {}): Promise<ApiJobListResponse> {

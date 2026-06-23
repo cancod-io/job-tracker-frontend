@@ -143,9 +143,16 @@ export function JobsList() {
   const fetchRuns = useMemo(() => fetchRunsQuery.data?.runs ?? [], [fetchRunsQuery.data]);
   const sourceOptions = useMemo(() => {
     const list = jobSourcesQuery.data ?? [];
-    if (source && !list.includes(source)) return [source, ...list];
+    if (source && !list.some((option) => option.id === source)) {
+      return [{ id: source, label: source }, ...list];
+    }
     return list;
   }, [jobSourcesQuery.data, source]);
+
+  const activeSourceLabel = useMemo(() => {
+    const match = sourceOptions.find((option) => option.id === source);
+    return match?.label ?? source;
+  }, [sourceOptions, source]);
 
   // ── Client filter store (selector-sliced to avoid extra re-renders) ───────
   const experience = useJobFiltersStore((s) => s.experience);
@@ -391,6 +398,7 @@ export function JobsList() {
       {source ? (
         <FetchRunsTimeline
           source={source}
+          sourceLabel={activeSourceLabel}
           runs={fetchRuns}
           loading={fetchRunsQuery.isPending}
           selectedRunId={timelineSelectedRunId}

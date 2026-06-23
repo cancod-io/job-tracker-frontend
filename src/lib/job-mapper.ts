@@ -80,6 +80,7 @@ export function mapApiJobListItemToJob(item: ApiJobListItem): Job {
     title: apiTitle(item),
     company: item.company?.trim() || "—",
     source: item.source?.trim() || null,
+    sourceLabel: item.source_label?.trim() || null,
     logoUrl: item.company_logo_url?.trim() || null,
     datePosted: buildPostedLabel(item),
     sortPostedAtMs: postedAtSortMilliseconds(item),

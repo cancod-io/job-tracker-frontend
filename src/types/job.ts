@@ -9,8 +9,10 @@ export type Job = {
   id: string;
   title: string;
   company: string;
-  /** Listing source from the API (`source`). */
+  /** Listing source id from the API (`source`) — used for filtering. */
   source: string | null;
+  /** Display label from the API (`source_label`). */
+  sourceLabel: string | null;
   /** Remote logo URL from the API, or null to show initials. */
   logoUrl: string | null;
   /** Short label for the card header (e.g. “5 days ago”, relative ISO). */
