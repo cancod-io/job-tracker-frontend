@@ -4,9 +4,9 @@ import { LayoutGrid, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SearchInput } from "@/components/ui/search-input";
 import { JobsDateRangeFilter } from "@/components/jobs/jobs-date-range-filter";
-import { formatJobSourceLabel } from "@/components/jobs/job-source-badge";
 import { ALL_JOB_SOURCES_VALUE } from "@/components/jobs/types";
 import { API_JOBS_SORT_BY, jobsSortByLabel } from "@/types/api-jobs";
+import type { JobSourceOption } from "@/types/api-jobs";
 import type { JobsViewMode } from "@/components/jobs/types";
 import type { ApiJobsSortBy } from "@/types/api-jobs";
 import { useJobFiltersStore } from "@/store/job-filters";
@@ -20,7 +20,7 @@ type JobsToolbarProps = {
   onSortByChange: (sortBy: ApiJobsSortBy) => void;
   source: string;
   onSourceChange: (source: string) => void;
-  sourceOptions: string[];
+  sourceOptions: JobSourceOption[];
   sourcesLoading?: boolean;
   postedFrom: string;
   postedTo: string;
@@ -89,9 +89,9 @@ export function JobsToolbar({
             aria-label="Filter jobs by source"
           >
             <option value={ALL_JOB_SOURCES_VALUE}>All sources</option>
-            {sourceOptions.map((value) => (
-              <option key={value} value={value}>
-                {formatJobSourceLabel(value)}
+            {sourceOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
               </option>
             ))}
           </select>

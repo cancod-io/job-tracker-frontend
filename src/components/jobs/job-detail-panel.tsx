@@ -157,8 +157,8 @@ export function JobDetailPanel({
         {/* Badges row */}
         <div className="flex flex-wrap gap-2">
           {job.isNew ? <JobNewBadge className="text-xs" /> : null}
-          {job.source ? (
-            <JobSourceBadge source={job.source} className="px-2.5 py-1 text-xs" />
+          {job.sourceLabel ? (
+            <JobSourceBadge label={job.sourceLabel} className="px-2.5 py-1 text-xs" />
           ) : null}
           {job.salary ? (
             <span className="inline-flex items-center rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground">

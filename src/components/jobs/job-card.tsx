@@ -139,7 +139,7 @@ export function JobCard({
                   {job.experienceLevel}
                 </span>
               ) : null}
-              {job.source ? <JobSourceBadge source={job.source} /> : null}
+              {job.sourceLabel ? <JobSourceBadge label={job.sourceLabel} /> : null}
               {trackedInfo ? (
                 <TrackedStatusBadge
                   status={trackedInfo.status}
@@ -243,7 +243,7 @@ export function JobCard({
           {trackedInfo ? (
             <TrackedStatusBadge status={trackedInfo.status} variant="pill" />
           ) : null}
-          {job.source ? <JobSourceBadge source={job.source} /> : null}
+          {job.sourceLabel ? <JobSourceBadge label={job.sourceLabel} /> : null}
           {job.salary ? (
             <span className={cn(badgeOutline, "text-foreground")}>{job.salary}</span>
           ) : null}
