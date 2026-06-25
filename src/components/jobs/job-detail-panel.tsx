@@ -16,7 +16,7 @@ import { notify } from "@/lib/notify";
 import { JobApplyButton } from "@/components/jobs/job-apply-button";
 import { JobMarkAppliedButton } from "@/components/jobs/job-mark-applied-button";
 import { TrackedStatusBadge } from "@/components/jobs/tracked-status-badge";
-import { JobNewBadge } from "@/components/jobs/job-new-badge";
+import { JobNewBadge, jobNewHighlightClassName } from "@/components/jobs/job-new-badge";
 import { JobSourceBadge } from "@/components/jobs/job-source-badge";
 import type { TrackedInfo } from "@/components/jobs/types";
 import type { Job, JobAtsStatus } from "@/types/job";
@@ -85,6 +85,7 @@ function externalHref(url: string): string {
 
 type JobDetailPanelProps = {
   job: Job;
+  showNewBadge?: boolean;
   onClose: () => void;
   trackedInfo?: TrackedInfo;
   onApplyClick: (job: Job) => void;
@@ -113,6 +114,7 @@ const footerSecondaryBtnClass = cn(
  */
 export function JobDetailPanel({
   job,
+  showNewBadge = false,
   onClose,
   trackedInfo,
   onApplyClick,
@@ -125,11 +127,19 @@ export function JobDetailPanel({
 
   return (
     <aside
-      className="flex h-full min-h-0 flex-col overflow-hidden bg-card"
+      className={cn(
+        "flex h-full min-h-0 flex-col overflow-hidden bg-card",
+        showNewBadge && "ring-2 ring-inset ring-amber-400/50",
+      )}
       aria-label={`Job details: ${job.title}`}
     >
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-3 border-b border-border/70 px-4 py-4 md:px-5">
+      <div
+        className={cn(
+          "flex items-start justify-between gap-3 border-b border-border/70 px-4 py-4 md:px-5",
+          showNewBadge && jobNewHighlightClassName(),
+        )}
+      >
         <div className="min-w-0">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
             Job details
@@ -156,7 +166,7 @@ export function JobDetailPanel({
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 md:px-5 md:py-5">
         {/* Badges row */}
         <div className="flex flex-wrap gap-2">
-          {job.isNew ? <JobNewBadge className="text-xs" /> : null}
+          {showNewBadge ? <JobNewBadge className="text-xs" /> : null}
           {job.sourceLabel ? (
             <JobSourceBadge label={job.sourceLabel} className="px-2.5 py-1 text-xs" />
           ) : null}
@@ -177,7 +187,7 @@ export function JobDetailPanel({
           ) : null}
           {trackedInfo ? (
             <TrackedStatusBadge status={trackedInfo.status} variant="pill" />
-          ) : job.isNew && job.atsStatus === "new" ? null : (
+          ) : showNewBadge && job.atsStatus === "new" ? null : (
             <span
               className={cn(
                 "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium",

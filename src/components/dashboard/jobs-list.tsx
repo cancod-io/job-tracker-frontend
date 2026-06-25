@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { Sparkles } from "lucide-react";
 import { notify } from "@/lib/notify";
 import { formatPostedDateRange, normalizePostedDateRange } from "@/lib/date-utils";
 import { readJobsViewMode, writeJobsViewMode } from "@/lib/jobs-view-mode";
@@ -15,6 +16,7 @@ import { useFetchRunsQuery } from "@/hooks/use-fetch-runs-query";
 import { useJobsListUrlState } from "@/hooks/use-jobs-list-url-state";
 import { useSlideOverPanel } from "@/hooks/use-slide-over-panel";
 import { useApplyFlow } from "@/hooks/use-apply-flow";
+import { useRealtimeJobsStore } from "@/store/realtime-jobs-store";
 import { Skeleton } from "@/components/ui/skeleton";
 import { JobCard } from "@/components/jobs/job-card";
 import { JobCardSkeleton } from "@/components/jobs/job-card-skeleton";
@@ -241,6 +243,15 @@ export function JobsList() {
   const isRefreshing = jobsQuery.isFetching && !jobsQuery.isPending;
   const showCardSkeletons = loading || isRefreshing;
   const jobs = useMemo(() => jobsQuery.data?.jobs ?? [], [jobsQuery.data]);
+
+  const processJobsSnapshot = useRealtimeJobsStore((s) => s.processJobsSnapshot);
+  const clearSocketNew = useRealtimeJobsStore((s) => s.clearSocketNew);
+  const socketNewJobIds = useRealtimeJobsStore((s) => s.socketNewJobIds);
+  const newJobsCount = socketNewJobIds.size;
+
+  useEffect(() => {
+    processJobsSnapshot(jobs.map((job) => job.id));
+  }, [jobs, processJobsSnapshot]);
   useEffect(() => {
     if (!jobsQuery.error) return;
     notify.error(jobsQuery.error instanceof Error ? jobsQuery.error.message : "Could not load jobs.");
@@ -272,10 +283,18 @@ export function JobsList() {
   }, [applications]);
 
   // ── Client-side filtered list ─────────────────────────────────────────────
-  const visibleJobs = useMemo(
-    () => jobs.filter((job) => matchesClientFilters(job, experience, jobType)),
-    [jobs, experience, jobType],
-  );
+  const visibleJobs = useMemo(() => {
+    const filtered = jobs.filter((job) => matchesClientFilters(job, experience, jobType));
+    if (socketNewJobIds.size === 0) return filtered;
+
+    const fresh: typeof filtered = [];
+    const rest: typeof filtered = [];
+    for (const job of filtered) {
+      if (socketNewJobIds.has(job.id)) fresh.push(job);
+      else rest.push(job);
+    }
+    return [...fresh, ...rest];
+  }, [jobs, experience, jobType, socketNewJobIds]);
 
   // ── Pagination ────────────────────────────────────────────────────────────
   const totalPages = Math.max(1, Math.ceil(total / perPage));
@@ -361,6 +380,30 @@ export function JobsList() {
     dismissPending,
   } = useApplyFlow();
 
+  const handleApplyWithBadgeClear = useCallback(
+    (job: Job) => {
+      clearSocketNew(job.id);
+      handleApplyClick(job);
+    },
+    [clearSocketNew, handleApplyClick],
+  );
+
+  const handleMarkAppliedWithBadgeClear = useCallback(
+    (job: Job) => {
+      clearSocketNew(job.id);
+      void handleMarkApplied(job);
+    },
+    [clearSocketNew, handleMarkApplied],
+  );
+
+  const handleOpenDetail = useCallback(
+    (jobId: string) => {
+      clearSocketNew(jobId);
+      openDetail(jobId);
+    },
+    [clearSocketNew, openDetail],
+  );
+
   // ─────────────────────────────────────────────────────────────────────────
 
   const sharedPaginationProps = {
@@ -377,6 +420,26 @@ export function JobsList() {
 
   return (
     <section id="jobs" className="scroll-mt-24 md:scroll-mt-28" aria-labelledby="jobs-heading">
+      {newJobsCount > 0 ? (
+        <div
+          className="mb-4 flex items-start gap-3 rounded-xl border-2 border-amber-400/55 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent px-4 py-3 shadow-md shadow-amber-500/10 dark:from-amber-500/20"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md">
+            <Sparkles className="size-4" aria-hidden />
+          </span>
+          <div className="min-w-0 pt-0.5">
+            <p className="text-sm font-semibold text-foreground">
+              {newJobsCount === 1 ? "1 new job" : `${newJobsCount} new jobs`} just landed
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Highlighted listings are pinned to the top — open or apply to dismiss.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       <JobsToolbar
         total={total}
         loading={loading}
@@ -393,6 +456,7 @@ export function JobsList() {
         postedFrom={postedFrom}
         postedTo={postedTo}
         onPostedDateChange={handlePostedDateChange}
+        newJobsCount={newJobsCount}
       />
 
       {source ? (
@@ -443,10 +507,11 @@ export function JobsList() {
                 job={job}
                 viewMode={viewMode}
                 selected={selectedId === job.id}
+                showNewBadge={socketNewJobIds.has(job.id)}
                 trackedInfo={trackedJobsMap.get(Number(job.id))}
-                onSelect={() => openDetail(job.id)}
-                onApplyClick={handleApplyClick}
-                onMarkApplied={(j) => void handleMarkApplied(j)}
+                onSelect={() => handleOpenDetail(job.id)}
+                onApplyClick={handleApplyWithBadgeClear}
+                onMarkApplied={handleMarkAppliedWithBadgeClear}
                 markingApplied={markingAppliedIds.has(job.id)}
               />
             ))}
@@ -513,10 +578,11 @@ export function JobsList() {
             >
               <JobDetailPanel
                 job={detailJob}
+                showNewBadge={socketNewJobIds.has(detailJob.id)}
                 onClose={closeDetail}
                 trackedInfo={trackedJobsMap.get(Number(detailJob.id))}
-                onApplyClick={handleApplyClick}
-                onMarkApplied={(j) => void handleMarkApplied(j)}
+                onApplyClick={handleApplyWithBadgeClear}
+                onMarkApplied={handleMarkAppliedWithBadgeClear}
                 markingApplied={markingAppliedIds.has(detailJob.id)}
               />
             </div>

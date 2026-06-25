@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { UserNavItem } from "@/config/user-nav";
+import { NewJobsCountBadge } from "@/components/jobs/new-jobs-count-badge";
 import { cn } from "@/lib/utils";
 
 function isActive(pathname: string, href: string): boolean {
@@ -17,6 +18,7 @@ type UserNavLinkProps = {
   onNavigate?: () => void;
   className?: string;
   variant?: UserNavVariant;
+  badgeCount?: number;
 };
 
 export function UserNavLink({
@@ -24,6 +26,7 @@ export function UserNavLink({
   onNavigate,
   className,
   variant = "sidebar",
+  badgeCount = 0,
 }: UserNavLinkProps) {
   const pathname = usePathname() ?? "/";
   const active = isActive(pathname, item.href);
@@ -53,7 +56,8 @@ export function UserNavLink({
       )}
     >
       <Icon className="size-4 shrink-0 opacity-90" aria-hidden />
-      {item.label}
+      <span className="min-w-0 truncate">{item.label}</span>
+      {badgeCount > 0 ? <NewJobsCountBadge count={badgeCount} size="nav" /> : null}
     </Link>
   );
 }

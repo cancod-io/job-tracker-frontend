@@ -9,10 +9,13 @@ import { UserNavLink } from "@/components/layout/user-nav-link";
 import { UserProfileMenu } from "@/components/layout/user-profile-menu";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useRealtimeJobsStore } from "@/store/realtime-jobs-store";
 import { cn } from "@/lib/utils";
 
 export function MainAppShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const socketNewJobIds = useRealtimeJobsStore((s) => s.socketNewJobIds);
+  const newJobsCount = socketNewJobIds.size;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -52,6 +55,7 @@ export function MainAppShell({ children }: { children: ReactNode }) {
               key={item.href}
               item={item}
               variant="sidebar"
+              badgeCount={item.href === JOBS_PATH ? newJobsCount : 0}
               onNavigate={() => setMobileOpen(false)}
             />
           ))}
@@ -93,7 +97,12 @@ export function MainAppShell({ children }: { children: ReactNode }) {
 
             <nav className="hidden min-w-0 items-center gap-1 md:flex" aria-label="Main navigation">
               {userPrimaryNav.map((item) => (
-                <UserNavLink key={item.href} item={item} variant="topbar" />
+                <UserNavLink
+                  key={item.href}
+                  item={item}
+                  variant="topbar"
+                  badgeCount={item.href === JOBS_PATH ? newJobsCount : 0}
+                />
               ))}
             </nav>
           </div>
