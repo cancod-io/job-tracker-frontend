@@ -1,13 +1,8 @@
-export type RealtimeEventType =
-  | "jobs.ingested"
-  | "scraper_run.updated"
-  | "analytics.invalidate";
-
-export type RealtimeEvent = {
+export type JobsIngestedEvent = {
   id: string;
-  type: RealtimeEventType;
+  type: "jobs.ingested";
   ts: string;
-  payload: Record<string, unknown>;
+  payload: JobsIngestedPayload;
 };
 
 export type JobsIngestedPayload = {
@@ -31,20 +26,4 @@ export type JobsIngestedPayload = {
     unchanged: number;
     removed: number;
   }>;
-};
-
-export type ScraperRunUpdatedPayload = {
-  run_id: string;
-  provider: string;
-  status: string;
-  added_count: number;
-  updated_count: number;
-  unchanged_count: number;
-  removed_count: number;
-  fetch_run_id: number | null;
-  error_message: string | null;
-};
-
-export type AnalyticsInvalidatePayload = {
-  reason: "jobs.ingested" | "scraper_run.updated" | string;
 };

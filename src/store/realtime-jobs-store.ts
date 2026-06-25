@@ -1,12 +1,19 @@
 import { create } from "zustand";
 import { normalizeAddedJobIds, hasFreshIngestedJobs } from "@/lib/realtime-jobs-ingest";
+import {
+  clearSocketNewJobIds,
+  readSocketNewJobIds,
+  writeSocketNewJobIds,
+} from "@/lib/socket-new-jobs-storage";
 import type { JobsIngestedPayload } from "@/types/realtime";
 
 type RealtimeJobsState = {
+  activeUserId: number | null;
   socketNewJobIds: Set<string>;
   knownJobIds: Set<string>;
   snapshotInitialized: boolean;
   ingestPending: boolean;
+  hydrateForUser: (userId: number) => void;
   handleJobsIngested: (payload: JobsIngestedPayload) => boolean;
   processJobsSnapshot: (jobIds: string[]) => void;
   clearSocketNew: (jobId: string) => void;
@@ -16,11 +23,24 @@ type RealtimeJobsState = {
 
 const EMPTY_SET = new Set<string>();
 
+function persistSocketNewJobIds(userId: number | null, jobIds: Set<string>): void {
+  if (userId == null) return;
+  writeSocketNewJobIds(userId, jobIds);
+}
+
 export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
+  activeUserId: null,
   socketNewJobIds: new Set<string>(),
   knownJobIds: new Set<string>(),
   snapshotInitialized: false,
   ingestPending: false,
+
+  hydrateForUser(userId) {
+    set({
+      activeUserId: userId,
+      socketNewJobIds: readSocketNewJobIds(userId),
+    });
+  },
 
   handleJobsIngested(payload) {
     if (!hasFreshIngestedJobs(payload)) return false;
@@ -35,6 +55,8 @@ export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
         socketNewJobIds.add(id);
       }
     }
+
+    persistSocketNewJobIds(state.activeUserId, socketNewJobIds);
 
     set({
       ingestPending: true,
@@ -70,6 +92,8 @@ export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
       knownJobIds.add(id);
     }
 
+    persistSocketNewJobIds(state.activeUserId, socketNewJobIds);
+
     set({
       socketNewJobIds,
       knownJobIds,
@@ -84,6 +108,7 @@ export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
     if (!state.socketNewJobIds.has(trimmed)) return;
     const socketNewJobIds = new Set(state.socketNewJobIds);
     socketNewJobIds.delete(trimmed);
+    persistSocketNewJobIds(state.activeUserId, socketNewJobIds);
     set({ socketNewJobIds });
   },
 
@@ -92,7 +117,12 @@ export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
   },
 
   reset() {
+    const { activeUserId } = get();
+    if (activeUserId != null) {
+      clearSocketNewJobIds(activeUserId);
+    }
     set({
+      activeUserId: null,
       socketNewJobIds: new Set(EMPTY_SET),
       knownJobIds: new Set(EMPTY_SET),
       snapshotInitialized: false,
