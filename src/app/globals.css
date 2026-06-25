@@ -275,6 +275,30 @@
 }
 
 /* ── Apply banner animation ─────────────────────────────────────────────────── */
+@keyframes job-new-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgb(245 158 11 / 0.45),
+      0 4px 14px rgb(245 158 11 / 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px rgb(245 158 11 / 0.12),
+      0 4px 18px rgb(245 158 11 / 0.28);
+  }
+}
+
+.animate-job-new-pulse {
+  animation: job-new-pulse 2.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-job-new-pulse {
+    animation: none;
+  }
+}
+
 @keyframes slide-up {
   from {
     opacity: 0;

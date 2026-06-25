@@ -4,7 +4,7 @@ import { companyInitials } from "@/lib/company-utils";
 import { JobApplyButton } from "@/components/jobs/job-apply-button";
 import { JobMarkAppliedButton } from "@/components/jobs/job-mark-applied-button";
 import { TrackedStatusBadge } from "@/components/jobs/tracked-status-badge";
-import { JobNewBadge } from "@/components/jobs/job-new-badge";
+import { JobNewBadge, jobNewHighlightClassName } from "@/components/jobs/job-new-badge";
 import { JobSourceBadge } from "@/components/jobs/job-source-badge";
 import type { TrackedInfo, JobsViewMode } from "@/components/jobs/types";
 import type { Job } from "@/types/job";
@@ -28,6 +28,7 @@ type JobCardProps = {
   job: Job;
   viewMode: JobsViewMode;
   selected: boolean;
+  showNewBadge?: boolean;
   trackedInfo?: TrackedInfo;
   onSelect: () => void;
   onApplyClick: (job: Job) => void;
@@ -43,6 +44,7 @@ export function JobCard({
   job,
   viewMode,
   selected,
+  showNewBadge = false,
   trackedInfo,
   onSelect,
   onApplyClick,
@@ -58,9 +60,10 @@ export function JobCard({
     "rounded-xl border bg-card text-left shadow-sm outline-none",
     "transition-[transform,box-shadow,border-color] duration-150 motion-reduce:transition-none",
     "hover:border-primary/45 hover:shadow-md motion-reduce:hover:translate-y-0",
+    showNewBadge && jobNewHighlightClassName(),
     selected
       ? "border-primary/55 bg-primary/5 ring-2 ring-primary/25 shadow-md"
-      : "border-border/80",
+      : !showNewBadge && "border-border/80",
   );
 
   const LogoEl = () =>
@@ -86,7 +89,11 @@ export function JobCard({
   if (viewMode === "list") {
     return (
       <article
-        className={cn(base, "cursor-pointer hover:-translate-y-px focus-visible:ring-2 focus-visible:ring-primary/45")}
+        className={cn(
+          base,
+          "cursor-pointer hover:-translate-y-px focus-visible:ring-2 focus-visible:ring-primary/45",
+          showNewBadge && "border-l-4 border-l-amber-400",
+        )}
         onClick={handleCardClick}
         onKeyDown={(e) => handleCardKeyDown(e, onSelect)}
         role="button"
@@ -104,7 +111,7 @@ export function JobCard({
               <h4 className="truncate text-[13px] font-semibold leading-snug text-foreground">
                 {job.title}
               </h4>
-              {job.isNew ? <JobNewBadge /> : null}
+              {showNewBadge ? <JobNewBadge /> : null}
               <span className="shrink-0 text-[11px] text-muted-foreground">{job.datePosted}</span>
             </div>
             <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-px text-xs text-muted-foreground">
@@ -225,7 +232,7 @@ export function JobCard({
                 <h4 className="line-clamp-2 text-[15px] leading-snug tracking-tight text-foreground">
                   {job.title}
                 </h4>
-                {job.isNew ? <JobNewBadge className="mt-0.5" /> : null}
+                {showNewBadge ? <JobNewBadge className="mt-0.5" /> : null}
               </div>
               <span className="shrink-0 tabular-nums text-[11px] font-medium text-muted-foreground">
                 {job.datePosted}

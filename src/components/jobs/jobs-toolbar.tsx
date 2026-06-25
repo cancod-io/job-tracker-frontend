@@ -4,6 +4,7 @@ import { LayoutGrid, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SearchInput } from "@/components/ui/search-input";
 import { JobsDateRangeFilter } from "@/components/jobs/jobs-date-range-filter";
+import { NewJobsCountBadge } from "@/components/jobs/new-jobs-count-badge";
 import { ALL_JOB_SOURCES_VALUE } from "@/components/jobs/types";
 import { API_JOBS_SORT_BY, jobsSortByLabel } from "@/types/api-jobs";
 import type { JobSourceOption } from "@/types/api-jobs";
@@ -25,6 +26,7 @@ type JobsToolbarProps = {
   postedFrom: string;
   postedTo: string;
   onPostedDateChange: (from: string, to: string) => void;
+  newJobsCount?: number;
 };
 
 /**
@@ -44,6 +46,7 @@ export function JobsToolbar({
   postedFrom,
   postedTo,
   onPostedDateChange,
+  newJobsCount = 0,
 }: JobsToolbarProps) {
   const { query, setQuery } = useJobFiltersStore();
 
@@ -51,12 +54,15 @@ export function JobsToolbar({
     <div className="flex flex-col gap-4 pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
       {/* Left: heading + count */}
       <div className="min-w-0 flex-1 space-y-1">
-        <h2
-          id="jobs-heading"
-          className="text-lg tracking-tight text-foreground md:text-xl"
-        >
-          Job listings
-        </h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2
+            id="jobs-heading"
+            className="text-lg tracking-tight text-foreground md:text-xl"
+          >
+            Job listings
+          </h2>
+          {newJobsCount > 0 ? <NewJobsCountBadge count={newJobsCount} size="inline" /> : null}
+        </div>
         <p
           className="text-xs tabular-nums text-muted-foreground md:text-sm"
           aria-live="polite"
