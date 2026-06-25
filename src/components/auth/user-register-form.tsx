@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
-import { JOBS_PATH, LOGIN_PATH, verifyEmailHref } from "@/config/auth-routes";
+import { JOBS_PATH, LOGIN_PATH, verifyEmailHref, resolveSafeNextPath } from "@/config/auth-routes";
 import {
   MIN_PASSWORD_LENGTH,
   PasswordFieldsGroup,
@@ -16,7 +16,7 @@ function UserRegisterFormInner() {
   const { status, register } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get("next") ?? JOBS_PATH;
+  const nextPath = resolveSafeNextPath(searchParams.get("next"));
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -28,7 +28,7 @@ function UserRegisterFormInner() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.replace(nextPath.startsWith("/") ? nextPath : `/${nextPath}`);
+      router.replace(nextPath);
     }
   }, [status, router, nextPath]);
 
@@ -55,7 +55,7 @@ function UserRegisterFormInner() {
         setPendingApprovalEmail(result.email);
         return;
       }
-      router.replace(nextPath.startsWith("/") ? nextPath : `/${nextPath}`);
+      router.replace(nextPath);
     } catch (err) {
       notify.error(err instanceof Error ? err.message : "Registration failed");
     } finally {

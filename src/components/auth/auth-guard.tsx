@@ -2,7 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { LOGIN_PATH } from "@/config/auth-routes";
+import { LOGIN_PATH, resolveSafeNextPath } from "@/config/auth-routes";
 import { useAuth } from "@/providers/auth-provider";
 
 export function AuthGuard({ children }: { children: ReactNode }) {
@@ -12,7 +12,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (status !== "unauthenticated") return;
-    const next = pathname && pathname !== "/" ? pathname : undefined;
+    const next = pathname && pathname !== "/" ? resolveSafeNextPath(pathname) : undefined;
     const loginUrl = next
       ? `${LOGIN_PATH}?next=${encodeURIComponent(next)}`
       : LOGIN_PATH;

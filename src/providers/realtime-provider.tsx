@@ -15,10 +15,9 @@ import {
 } from "@/lib/browser-notifications";
 import { notify } from "@/lib/notify";
 import { RealtimeClient } from "@/lib/realtime-client";
-import { realtimeLog } from "@/lib/realtime-logger";
 import { useAuth } from "@/providers/auth-provider";
 import { useRealtimeJobsStore } from "@/store/realtime-jobs-store";
-import type { JobsIngestedPayload, RealtimeEvent } from "@/types/realtime";
+import type { JobsIngestedEvent, JobsIngestedPayload } from "@/types/realtime";
 import { JOBS_PATH } from "@/config/auth-routes";
 
 const JOBS_INGEST_DEBOUNCE_MS = 3_000;
@@ -46,13 +45,6 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       const addedJobIds = normalizeAddedJobIds(payload);
       const summary = formatJobsIngestMessage(payload);
       const title = jobsIngestNotificationTitle(payload);
-
-      realtimeLog.info("jobs.ingested handled", {
-        added: payload.added,
-        updated: payload.updated,
-        addedJobIds,
-        summary,
-      });
 
       notify.info(summary, {
         title,
@@ -83,14 +75,10 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     [queryClient, router],
   );
 
-  const onEvent = useCallback(
-    (event: RealtimeEvent) => {
-      if (event.type !== "jobs.ingested") {
-        realtimeLog.debug("unhandled event type", event.type);
-      }
-      if (event.type === "jobs.ingested" && isJobsIngestedPayload(event.payload)) {
-        handleJobsIngested(event.payload);
-      }
+  const onJobsIngested = useCallback(
+    (event: JobsIngestedEvent) => {
+      if (!isJobsIngestedPayload(event.payload)) return;
+      handleJobsIngested(event.payload);
     },
     [handleJobsIngested],
   );
@@ -101,14 +89,13 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     user?.approval_status === "approved";
 
   useEffect(() => {
-    if (!canConnect || !accessToken) {
-      realtimeLog.info("not connecting", { status, approved: user?.approval_status });
+    if (!canConnect || !accessToken || !user?.id) {
       clientRef.current?.disconnect();
       clientRef.current = null;
       return;
     }
 
-    realtimeLog.info("starting client");
+    useRealtimeJobsStore.getState().hydrateForUser(user.id);
 
     void requestNotificationPermission();
 
@@ -116,7 +103,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     clientRef.current = client;
 
     client.connect(accessToken, {
-      onEvent,
+      onJobsIngested,
       onAuthError: () => {
         void (async () => {
           await refreshSession();
@@ -137,7 +124,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         clientRef.current = null;
       }
     };
-  }, [canConnect, accessToken, onEvent, logout, refreshSession]);
+  }, [canConnect, accessToken, user?.id, onJobsIngested, logout, refreshSession]);
 
   useEffect(() => {
     if (status === "unauthenticated") {

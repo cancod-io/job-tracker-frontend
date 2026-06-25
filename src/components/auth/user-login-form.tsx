@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
-import { JOBS_PATH, REGISTER_PATH, verifyEmailHref } from "@/config/auth-routes";
+import { JOBS_PATH, REGISTER_PATH, verifyEmailHref, resolveSafeNextPath } from "@/config/auth-routes";
 import { isLoginAuthError, LOGIN_ERROR_CODES, type LoginField } from "@/lib/auth-errors";
 import { notify } from "@/lib/notify";
 import { useAuth } from "@/providers/auth-provider";
@@ -46,7 +46,7 @@ function UserLoginFormInner() {
   const { status, login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get("next") ?? JOBS_PATH;
+  const nextPath = resolveSafeNextPath(searchParams.get("next"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,7 +55,7 @@ function UserLoginFormInner() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.replace(nextPath.startsWith("/") ? nextPath : `/${nextPath}`);
+      router.replace(nextPath);
     }
   }, [status, router, nextPath]);
 
@@ -91,7 +91,7 @@ function UserLoginFormInner() {
     setSubmitting(true);
     try {
       await login(email.trim(), password);
-      router.replace(nextPath.startsWith("/") ? nextPath : `/${nextPath}`);
+      router.replace(nextPath);
     } catch (err) {
       if (isLoginAuthError(err) && err.code === LOGIN_ERROR_CODES.EMAIL_NOT_VERIFIED) {
         notify.info("Verify your email before signing in.");
