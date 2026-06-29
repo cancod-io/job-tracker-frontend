@@ -5,10 +5,10 @@ import { RealtimeProvider } from "@/providers/realtime-provider";
 
 export default function ShellLayout({ children }: { children: ReactNode }) {
   return (
-    <MainAppShell>
-      <AuthGuard>
-        <RealtimeProvider>{children}</RealtimeProvider>
-      </AuthGuard>
-    </MainAppShell>
+    <RealtimeProvider>
+      <MainAppShell>
+        <AuthGuard>{children}</AuthGuard>
+      </MainAppShell>
+    </RealtimeProvider>
   );
 }

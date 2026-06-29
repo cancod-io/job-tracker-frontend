@@ -8,6 +8,7 @@ import { userPrimaryNav } from "@/config/user-nav";
 import { UserNavLink } from "@/components/layout/user-nav-link";
 import { UserProfileMenu } from "@/components/layout/user-profile-menu";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { RealtimeConnectionIndicator } from "@/components/realtime/realtime-connection-indicator";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useRealtimeJobsStore } from "@/store/realtime-jobs-store";
 import { cn } from "@/lib/utils";
@@ -108,6 +109,7 @@ export function MainAppShell({ children }: { children: ReactNode }) {
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <RealtimeConnectionIndicator />
             <ThemeToggle />
             <UserProfileMenu />
             <button
