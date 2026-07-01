@@ -17,6 +17,7 @@ type RealtimeJobsState = {
   handleJobsIngested: (payload: JobsIngestedPayload) => boolean;
   processJobsSnapshot: (jobIds: string[]) => void;
   clearSocketNew: (jobId: string) => void;
+  handleJobDeleted: (jobId: number) => void;
   isSocketNew: (jobId: string) => boolean;
   reset: () => void;
 };
@@ -110,6 +111,22 @@ export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
     socketNewJobIds.delete(trimmed);
     persistSocketNewJobIds(state.activeUserId, socketNewJobIds);
     set({ socketNewJobIds });
+  },
+
+  handleJobDeleted(jobId) {
+    const id = String(jobId);
+    const state = get();
+    const socketNewJobIds = new Set(state.socketNewJobIds);
+    const knownJobIds = new Set(state.knownJobIds);
+    let changed = false;
+
+    if (socketNewJobIds.delete(id)) changed = true;
+    if (knownJobIds.delete(id)) changed = true;
+
+    if (!changed) return;
+
+    persistSocketNewJobIds(state.activeUserId, socketNewJobIds);
+    set({ socketNewJobIds, knownJobIds });
   },
 
   isSocketNew(jobId) {

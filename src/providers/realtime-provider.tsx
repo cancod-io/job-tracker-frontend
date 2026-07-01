@@ -8,29 +8,16 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { usePathname, useRouter } from "next/navigation";
 import { getStoredAccessToken } from "@/lib/auth-token";
 import {
-  formatJobsIngestMessage,
-  jobsIngestNotificationTitle,
-  normalizeAddedJobIds,
-} from "@/lib/realtime-jobs-ingest";
-import {
   requestNotificationPermission,
-  showJobIngestNotification,
 } from "@/lib/browser-notifications";
-import { notify } from "@/lib/notify";
 import { RealtimeClient } from "@/lib/realtime-client";
+import { useRealtimeJobsSync } from "@/hooks/use-realtime-jobs-sync";
 import { useAuth } from "@/providers/auth-provider";
 import { useRealtimeJobsStore } from "@/store/realtime-jobs-store";
-import type { JobsIngestedEvent, JobsIngestedPayload } from "@/types/realtime";
 import type { RealtimeConnectionStatus, RealtimeStatusMeta } from "@/types/realtime-connection";
-import { JOBS_PATH } from "@/config/auth-routes";
-
-const JOBS_INGEST_DEBOUNCE_MS = 3_000;
 
 type RealtimeConnectionContextValue = {
   status: RealtimeConnectionStatus;
@@ -43,10 +30,6 @@ type RealtimeConnectionContextValue = {
 };
 
 const RealtimeConnectionContext = createContext<RealtimeConnectionContextValue | null>(null);
-
-function isJobsIngestedPayload(payload: Record<string, unknown>): payload is JobsIngestedPayload {
-  return typeof payload.added === "number" && typeof payload.updated === "number";
-}
 
 export function useRealtimeConnection(): RealtimeConnectionContextValue {
   const ctx = useContext(RealtimeConnectionContext);
@@ -66,14 +49,9 @@ export function useRealtimeConnection(): RealtimeConnectionContextValue {
 
 export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const { status: authStatus, user, accessToken, logout, refreshSession } = useAuth();
-  const queryClient = useQueryClient();
-  const router = useRouter();
-  const pathname = usePathname();
+  const { onJobsIngested, onJobDeleted } = useRealtimeJobsSync();
 
   const clientRef = useRef<RealtimeClient | null>(null);
-  const ingestDebounceRef = useRef<number | null>(null);
-  const pathnameRef = useRef(pathname);
-  pathnameRef.current = pathname;
 
   const [connectionStatus, setConnectionStatus] = useState<RealtimeConnectionStatus>("unavailable");
   const [retryInMs, setRetryInMs] = useState<number | null>(null);
@@ -101,52 +79,6 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const handleJobsIngested = useCallback(
-    (payload: JobsIngestedPayload) => {
-      const shouldRefresh = useRealtimeJobsStore.getState().handleJobsIngested(payload);
-      if (!shouldRefresh) return;
-
-      const addedJobIds = normalizeAddedJobIds(payload);
-      const summary = formatJobsIngestMessage(payload);
-      const title = jobsIngestNotificationTitle(payload);
-
-      notify.info(summary, {
-        title,
-        duration: 8_000,
-      });
-
-      void requestNotificationPermission().then(() => {
-        showJobIngestNotification({
-          title,
-          body: summary,
-          jobIds: addedJobIds,
-          onClick: () => {
-            if (pathnameRef.current !== JOBS_PATH) {
-              router.push(JOBS_PATH);
-            }
-          },
-        });
-      });
-
-      if (ingestDebounceRef.current != null) {
-        clearTimeout(ingestDebounceRef.current);
-      }
-      ingestDebounceRef.current = window.setTimeout(() => {
-        ingestDebounceRef.current = null;
-        void queryClient.invalidateQueries({ queryKey: ["jobs-list"] });
-      }, JOBS_INGEST_DEBOUNCE_MS);
-    },
-    [queryClient, router],
-  );
-
-  const onJobsIngested = useCallback(
-    (event: JobsIngestedEvent) => {
-      if (!isJobsIngestedPayload(event.payload)) return;
-      handleJobsIngested(event.payload);
-    },
-    [handleJobsIngested],
-  );
-
   const reconnect = useCallback(() => {
     if (!canConnect) return;
     setConnectionStatus("connecting");
@@ -171,6 +103,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
 
     client.connect(accessToken, {
       onJobsIngested,
+      onJobDeleted,
       onStatusChange: handleStatusChange,
       onAuthError: () => {
         void (async () => {
@@ -192,25 +125,22 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         clientRef.current = null;
       }
     };
-  }, [canConnect, accessToken, user?.id, onJobsIngested, handleStatusChange, logout, refreshSession]);
+  }, [
+    canConnect,
+    accessToken,
+    user?.id,
+    onJobsIngested,
+    onJobDeleted,
+    handleStatusChange,
+    logout,
+    refreshSession,
+  ]);
 
   useEffect(() => {
     if (authStatus === "unauthenticated") {
       useRealtimeJobsStore.getState().reset();
-      if (ingestDebounceRef.current != null) {
-        clearTimeout(ingestDebounceRef.current);
-        ingestDebounceRef.current = null;
-      }
     }
   }, [authStatus]);
-
-  useEffect(() => {
-    return () => {
-      if (ingestDebounceRef.current != null) {
-        clearTimeout(ingestDebounceRef.current);
-      }
-    };
-  }, []);
 
   const connectionValue = useMemo<RealtimeConnectionContextValue>(
     () => ({

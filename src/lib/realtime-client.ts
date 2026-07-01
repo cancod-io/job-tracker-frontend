@@ -1,6 +1,6 @@
 import { buildRealtimeWsUrl } from "@/lib/realtime-ws-url";
 import type { RealtimeConnectionStatus, RealtimeStatusMeta } from "@/types/realtime-connection";
-import type { JobsIngestedEvent } from "@/types/realtime";
+import type { JobsIngestedEvent, JobDeletedEvent } from "@/types/realtime";
 
 export const WS_CLOSE_AUTH = 4401;
 export const WS_CLOSE_DISABLED = 4403;
@@ -11,6 +11,7 @@ export const RECONNECT_MAX_MS = 30_000;
 
 export type RealtimeEventHandlers = {
   onJobsIngested: (event: JobsIngestedEvent) => void;
+  onJobDeleted: (event: JobDeletedEvent) => void;
   onAuthError: () => void;
   onDisabled: () => void;
   onStatusChange?: (status: RealtimeConnectionStatus, meta?: RealtimeStatusMeta) => void;
@@ -21,6 +22,18 @@ function isJobsIngestedEvent(data: unknown): data is JobsIngestedEvent {
   const record = data as Record<string, unknown>;
   return (
     record.type === "jobs.ingested" &&
+    typeof record.id === "string" &&
+    typeof record.ts === "string" &&
+    record.payload != null &&
+    typeof record.payload === "object"
+  );
+}
+
+function isJobDeletedEvent(data: unknown): data is JobDeletedEvent {
+  if (!data || typeof data !== "object") return false;
+  const record = data as Record<string, unknown>;
+  return (
+    record.type === "job.deleted" &&
     typeof record.id === "string" &&
     typeof record.ts === "string" &&
     record.payload != null &&
@@ -118,6 +131,11 @@ export class RealtimeClient {
 
       if (isJobsIngestedEvent(data)) {
         this.handlers?.onJobsIngested(data);
+        return;
+      }
+
+      if (isJobDeletedEvent(data)) {
+        this.handlers?.onJobDeleted(data);
       }
     };
 

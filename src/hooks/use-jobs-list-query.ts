@@ -24,6 +24,8 @@ type JobsListQueryData = {
   jobs: Job[];
 };
 
+export type { JobsListQueryData };
+
 export function useJobsListQuery({
   page,
   perPage,
