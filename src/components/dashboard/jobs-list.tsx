@@ -113,6 +113,15 @@ function scrollToPageTop(): void {
   window.scrollTo({ top: 0, left: 0, behavior: reduceMotion ? "auto" : "smooth" });
 }
 
+function shouldShowJobNewBadge(
+  job: Job,
+  socketNewJobIds: Set<string>,
+  trackedInfo?: TrackedInfo,
+): boolean {
+  if (trackedInfo) return false;
+  return socketNewJobIds.has(job.id) || job.isNew;
+}
+
 // ─── Component ─────────────────────────────────────────────────────────────
 
 /**
@@ -507,7 +516,11 @@ export function JobsList() {
                 job={job}
                 viewMode={viewMode}
                 selected={selectedId === job.id}
-                showNewBadge={socketNewJobIds.has(job.id)}
+                showNewBadge={shouldShowJobNewBadge(
+                  job,
+                  socketNewJobIds,
+                  trackedJobsMap.get(Number(job.id)),
+                )}
                 trackedInfo={trackedJobsMap.get(Number(job.id))}
                 onSelect={() => handleOpenDetail(job.id)}
                 onApplyClick={handleApplyWithBadgeClear}
@@ -578,7 +591,11 @@ export function JobsList() {
             >
               <JobDetailPanel
                 job={detailJob}
-                showNewBadge={socketNewJobIds.has(detailJob.id)}
+                showNewBadge={shouldShowJobNewBadge(
+                  detailJob,
+                  socketNewJobIds,
+                  trackedJobsMap.get(Number(detailJob.id)),
+                )}
                 onClose={closeDetail}
                 trackedInfo={trackedJobsMap.get(Number(detailJob.id))}
                 onApplyClick={handleApplyWithBadgeClear}

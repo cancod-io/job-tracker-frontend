@@ -2,7 +2,7 @@ import type { JobsIngestedPayload } from "@/types/realtime";
 
 /** Normalize new job ids from a `jobs.ingested` payload. */
 export function normalizeAddedJobIds(payload: JobsIngestedPayload): string[] {
-  const raw = payload.added_job_ids;
+  const raw = payload.added_job_ids ?? payload.new_job_ids;
   if (!Array.isArray(raw)) return [];
 
   const ids = new Set<string>();
