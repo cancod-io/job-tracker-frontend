@@ -19,19 +19,15 @@ export function hasFreshIngestedJobs(payload: JobsIngestedPayload): boolean {
 
 export function formatJobsIngestMessage(payload: JobsIngestedPayload): string {
   const newCount = normalizeAddedJobIds(payload).length || Math.max(0, payload.added);
-  const parts: string[] = [];
   if (newCount > 0) {
-    parts.push(`${newCount} new job${newCount === 1 ? "" : "s"}`);
+    return `${newCount} new job${newCount === 1 ? "" : "s"} added`;
   }
-  if (payload.updated > 0) {
-    parts.push(`${payload.updated} updated`);
-  }
-  return parts.length > 0 ? parts.join(", ") : "Job listings updated";
+  return "No new jobs added";
 }
 
 export function jobsIngestNotificationTitle(payload: JobsIngestedPayload): string {
   const newCount = normalizeAddedJobIds(payload).length || Math.max(0, payload.added);
-  if (newCount === 1) return "New job available";
-  if (newCount > 1) return `${newCount} new jobs available`;
-  return "Job listings updated";
+  if (newCount === 1) return "1 new job added";
+  if (newCount > 1) return `${newCount} new jobs added`;
+  return "Ingest complete";
 }
