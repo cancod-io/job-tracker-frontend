@@ -23,3 +23,22 @@ export function removeJobFromJobsListCache(queryClient: QueryClient, jobId: numb
     void queryClient.invalidateQueries({ queryKey: ["jobs-list"] });
   }
 }
+
+/** Clear `isNew` on a job across every cached `jobs-list` query (after acknowledge). */
+export function markJobAcknowledgedInJobsListCache(
+  queryClient: QueryClient,
+  jobId: string | number,
+): void {
+  const id = String(jobId);
+
+  queryClient.setQueriesData<JobsListQueryData>({ queryKey: ["jobs-list"] }, (old) => {
+    if (!old) return old;
+    let changed = false;
+    const jobs = old.jobs.map((job) => {
+      if (job.id !== id || !job.isNew) return job;
+      changed = true;
+      return { ...job, isNew: false };
+    });
+    return changed ? { ...old, jobs } : old;
+  });
+}

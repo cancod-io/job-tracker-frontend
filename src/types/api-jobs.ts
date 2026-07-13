@@ -41,7 +41,10 @@ export type ApiJobListItem = {
   created_at?: string;
   raw_payload?: ApiJobRawPayload | null;
   is_active?: boolean;
-  /** True when the listing was recently discovered — show a "New" badge on cards. */
+  /**
+   * Per-user “unseen” flag for the discovery New badge.
+   * Cleared by `POST /api/v1/jobs/{id}/acknowledge`. Not the same as `ats_status`.
+   */
   is_new?: boolean;
 };
 

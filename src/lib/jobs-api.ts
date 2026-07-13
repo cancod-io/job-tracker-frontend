@@ -73,3 +73,17 @@ export async function fetchJobsList(params: FetchJobsListParams = {}): Promise<A
 
   return (await res.json()) as ApiJobListResponse;
 }
+
+/** Marks a job as seen so subsequent list responses return `is_new: false`. */
+export async function acknowledgeJob(jobId: string | number): Promise<void> {
+  const id = String(jobId).trim();
+  if (!id) return;
+
+  const res = await fetchAuthed(`/api/v1/jobs/${encodeURIComponent(id)}/acknowledge`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: "{}",
+  });
+
+  await assertOkResponse(res, "Could not acknowledge job.");
+}
