@@ -9,17 +9,22 @@ type JobSnapshotRow = {
 
 type RealtimeJobsState = {
   activeUserId: number | null;
-  /** In-memory only — session highlights from `jobs.ingested` until acknowledge / API says not new. */
+  /** In-memory highlights from ingest / API `is_new` until the user acknowledges. */
   socketNewJobIds: Set<string>;
+  /** In-session ids cleared via open / apply / mark-applied (not persisted). */
+  acknowledgedJobIds: Set<string>;
   knownJobIds: Set<string>;
   snapshotInitialized: boolean;
   ingestPending: boolean;
   hydrateForUser: (userId: number) => void;
   handleJobsIngested: (payload: JobsIngestedPayload) => boolean;
   processJobsSnapshot: (jobs: JobSnapshotRow[]) => void;
+  /** Mark a job as seen for this session and drop socket highlight. */
+  markJobAcknowledged: (jobId: string) => void;
   clearSocketNew: (jobId: string) => void;
   handleJobDeleted: (jobId: number) => void;
   isSocketNew: (jobId: string) => boolean;
+  isAcknowledged: (jobId: string) => boolean;
   reset: () => void;
 };
 
@@ -28,7 +33,6 @@ const EMPTY_SET = new Set<string>();
 const LEGACY_SOCKET_KEY_PREFIX = "sjt_socket_new_jobs";
 const LEGACY_DISMISSED_KEY_PREFIX = "sjt_dismissed_new_jobs";
 
-/** Drop old localStorage badge state — `is_new` + acknowledge is the source of truth. */
 function clearLegacyNewBadgeStorage(userId: number): void {
   if (typeof window === "undefined") return;
   try {
@@ -42,6 +46,7 @@ function clearLegacyNewBadgeStorage(userId: number): void {
 export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
   activeUserId: null,
   socketNewJobIds: new Set<string>(),
+  acknowledgedJobIds: new Set<string>(),
   knownJobIds: new Set<string>(),
   snapshotInitialized: false,
   ingestPending: false,
@@ -50,8 +55,8 @@ export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
     clearLegacyNewBadgeStorage(userId);
     set({
       activeUserId: userId,
-      // Do not restore unread ids from disk — API `is_new` owns persistence.
       socketNewJobIds: new Set(EMPTY_SET),
+      acknowledgedJobIds: new Set(EMPTY_SET),
       knownJobIds: new Set(EMPTY_SET),
       snapshotInitialized: false,
       ingestPending: false,
@@ -64,10 +69,10 @@ export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
     const state = get();
     const addedJobIds = normalizeAddedJobIds(payload);
     const socketNewJobIds = new Set(state.socketNewJobIds);
-    const knownJobIds = state.knownJobIds;
+    const { knownJobIds, acknowledgedJobIds } = state;
 
     for (const id of addedJobIds) {
-      if (!knownJobIds.has(id)) {
+      if (!knownJobIds.has(id) && !acknowledgedJobIds.has(id)) {
         socketNewJobIds.add(id);
       }
     }
@@ -82,10 +87,12 @@ export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
   processJobsSnapshot(jobs) {
     const state = get();
     const jobIds = jobs.map((job) => job.id);
+    const acknowledgedJobIds = state.acknowledgedJobIds;
 
     if (!state.snapshotInitialized) {
-      // Seed session highlights from API `is_new` so badges/nav match the server.
-      const socketNewJobIds = new Set(jobs.filter((job) => job.isNew).map((job) => job.id));
+      const socketNewJobIds = new Set(
+        jobs.filter((job) => job.isNew && !acknowledgedJobIds.has(job.id)).map((job) => job.id),
+      );
       set({
         snapshotInitialized: true,
         knownJobIds: new Set(jobIds),
@@ -97,10 +104,13 @@ export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
     const socketNewJobIds = new Set(state.socketNewJobIds);
     const knownJobIds = new Set(state.knownJobIds);
 
-    // Keep highlights aligned with API `is_new` (acknowledge → false clears badge).
+    // Sync with API `is_new`, but never revive a job the user already acknowledged.
     for (const job of jobs) {
-      if (job.isNew) socketNewJobIds.add(job.id);
-      else socketNewJobIds.delete(job.id);
+      if (job.isNew && !acknowledgedJobIds.has(job.id)) {
+        socketNewJobIds.add(job.id);
+      } else {
+        socketNewJobIds.delete(job.id);
+      }
     }
 
     if (!state.ingestPending) {
@@ -110,7 +120,7 @@ export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
     }
 
     for (const job of jobs) {
-      if (!knownJobIds.has(job.id) && job.isNew) {
+      if (!knownJobIds.has(job.id) && job.isNew && !acknowledgedJobIds.has(job.id)) {
         socketNewJobIds.add(job.id);
       }
       knownJobIds.add(job.id);
@@ -123,45 +133,49 @@ export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
     });
   },
 
-  clearSocketNew(jobId) {
+  markJobAcknowledged(jobId) {
     const trimmed = jobId.trim();
     if (!trimmed) return;
 
     const state = get();
-    if (!state.socketNewJobIds.has(trimmed)) {
-      // Still mark known so a pending ingest snapshot won't re-add it.
-      if (!state.knownJobIds.has(trimmed)) {
-        const knownJobIds = new Set(state.knownJobIds);
-        knownJobIds.add(trimmed);
-        set({ knownJobIds });
-      }
-      return;
-    }
-
     const socketNewJobIds = new Set(state.socketNewJobIds);
+    const acknowledgedJobIds = new Set(state.acknowledgedJobIds);
     const knownJobIds = new Set(state.knownJobIds);
+
     socketNewJobIds.delete(trimmed);
+    acknowledgedJobIds.add(trimmed);
     knownJobIds.add(trimmed);
-    set({ socketNewJobIds, knownJobIds });
+
+    set({ socketNewJobIds, acknowledgedJobIds, knownJobIds });
+  },
+
+  clearSocketNew(jobId) {
+    get().markJobAcknowledged(jobId);
   },
 
   handleJobDeleted(jobId) {
     const id = String(jobId);
     const state = get();
     const socketNewJobIds = new Set(state.socketNewJobIds);
+    const acknowledgedJobIds = new Set(state.acknowledgedJobIds);
     const knownJobIds = new Set(state.knownJobIds);
     let changed = false;
 
     if (socketNewJobIds.delete(id)) changed = true;
+    if (acknowledgedJobIds.delete(id)) changed = true;
     if (knownJobIds.delete(id)) changed = true;
 
     if (!changed) return;
 
-    set({ socketNewJobIds, knownJobIds });
+    set({ socketNewJobIds, acknowledgedJobIds, knownJobIds });
   },
 
   isSocketNew(jobId) {
     return get().socketNewJobIds.has(jobId.trim());
+  },
+
+  isAcknowledged(jobId) {
+    return get().acknowledgedJobIds.has(jobId.trim());
   },
 
   reset() {
@@ -172,6 +186,7 @@ export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
     set({
       activeUserId: null,
       socketNewJobIds: new Set(EMPTY_SET),
+      acknowledgedJobIds: new Set(EMPTY_SET),
       knownJobIds: new Set(EMPTY_SET),
       snapshotInitialized: false,
       ingestPending: false,
