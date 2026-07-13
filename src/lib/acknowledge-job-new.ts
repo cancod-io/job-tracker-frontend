@@ -3,43 +3,31 @@ import { acknowledgeJob } from "@/lib/jobs-api";
 import { markJobAcknowledgedInJobsListCache } from "@/lib/jobs-list-cache";
 import { useRealtimeJobsStore } from "@/store/realtime-jobs-store";
 
-export type AcknowledgeJobNewOptions = {
-  /** Current API `is_new` flag for this job. */
-  isNew?: boolean;
-};
-
 /**
- * Clears the discovery New badge after the user opens/applies a job.
+ * Clear the discovery New badge for a job after the user opens it, clicks Apply,
+ * or marks it as applied.
  *
- * 1. Drops in-session socket highlight immediately
- * 2. Sets `isNew: false` in the jobs-list cache (optimistic)
- * 3. `POST /api/v1/jobs/{id}/acknowledge` so other browsers see `is_new: false`
- *
- * Safe to call after opening the detail panel — does not throw.
+ * Always updates local UI state (session acknowledged set + jobs cache). Then
+ * best-effort `POST /api/v1/jobs/{id}/acknowledge` for server `is_new`.
  */
 export async function acknowledgeJobNewBadge(
   queryClient: QueryClient,
   jobId: string,
-  options?: AcknowledgeJobNewOptions,
 ): Promise<boolean> {
   const trimmed = jobId.trim();
   if (!trimmed) return false;
 
-  const store = useRealtimeJobsStore.getState();
-  const wasSocketNew = store.socketNewJobIds.has(trimmed);
-  const isNew = options?.isNew === true;
+  // 1) Session + socket — prevents processJobsSnapshot from re-adding the badge.
+  useRealtimeJobsStore.getState().markJobAcknowledged(trimmed);
 
-  store.clearSocketNew(trimmed);
-
-  if (!isNew && !wasSocketNew) return false;
-
+  // 2) Optimistic list cache so `job.isNew` flips immediately.
   markJobAcknowledgedInJobsListCache(queryClient, trimmed);
 
+  // 3) Persist on the API (may 404 until backend ships the route).
   try {
     await acknowledgeJob(trimmed);
     return true;
   } catch {
-    // Keep optimistic cache clear for this session; server may still report is_new.
     return false;
   }
 }

@@ -254,6 +254,7 @@ export function JobsList() {
 
   const processJobsSnapshot = useRealtimeJobsStore((s) => s.processJobsSnapshot);
   const socketNewJobIds = useRealtimeJobsStore((s) => s.socketNewJobIds);
+  const acknowledgedJobIds = useRealtimeJobsStore((s) => s.acknowledgedJobIds);
   const newJobsCount = socketNewJobIds.size;
 
   useEffect(() => {
@@ -389,28 +390,39 @@ export function JobsList() {
 
   const handleApplyWithBadgeClear = useCallback(
     (job: Job) => {
+      // Clear New immediately, then start the apply / confirm flow.
+      void acknowledgeJobNewBadge(queryClient, job.id);
       handleApplyClick(job);
-      void acknowledgeJobNewBadge(queryClient, job.id, { isNew: job.isNew });
     },
     [handleApplyClick, queryClient],
   );
 
   const handleMarkAppliedWithBadgeClear = useCallback(
     (job: Job) => {
+      void acknowledgeJobNewBadge(queryClient, job.id);
       void handleMarkApplied(job);
-      void acknowledgeJobNewBadge(queryClient, job.id, { isNew: job.isNew });
     },
     [handleMarkApplied, queryClient],
+  );
+
+  const handleConfirmApplyWithBadgeClear = useCallback(
+    async (pendingId: string) => {
+      const pending = pendingApplyJobs.find((p) => p.id === pendingId);
+      if (pending) {
+        void acknowledgeJobNewBadge(queryClient, String(pending.jobId));
+      }
+      await handleConfirmApply(pendingId);
+    },
+    [handleConfirmApply, pendingApplyJobs, queryClient],
   );
 
   const handleOpenDetail = useCallback(
     (jobId: string) => {
       // Open first — never block the panel on acknowledge / cache updates.
       openDetail(jobId);
-      const job = jobs.find((j) => j.id === jobId);
-      void acknowledgeJobNewBadge(queryClient, jobId, { isNew: job?.isNew });
+      void acknowledgeJobNewBadge(queryClient, jobId);
     },
-    [jobs, openDetail, queryClient],
+    [openDetail, queryClient],
   );
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -511,6 +523,7 @@ export function JobsList() {
                 showNewBadge={shouldShowJobNewBadge(
                   job,
                   socketNewJobIds,
+                  acknowledgedJobIds,
                   trackedJobsMap.get(Number(job.id)),
                 )}
                 trackedInfo={trackedJobsMap.get(Number(job.id))}
@@ -587,6 +600,7 @@ export function JobsList() {
                 showNewBadge={shouldShowJobNewBadge(
                   detailJob,
                   socketNewJobIds,
+                  acknowledgedJobIds,
                   trackedJobsMap.get(Number(detailJob.id)),
                 )}
                 onClose={closeDetail}
@@ -607,7 +621,7 @@ export function JobsList() {
           jobTitle={pending.jobTitle}
           company={pending.company}
           stackIndex={index}
-          onConfirm={() => void handleConfirmApply(pending.id)}
+          onConfirm={() => void handleConfirmApplyWithBadgeClear(pending.id)}
           onDismiss={() => dismissPending(pending.id)}
           confirming={confirmingIds.has(pending.id)}
         />
