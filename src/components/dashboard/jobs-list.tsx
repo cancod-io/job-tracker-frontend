@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { notify } from "@/lib/notify";
+import { acknowledgeJobNewBadge } from "@/lib/acknowledge-job-new";
 import { formatPostedDateRange, normalizePostedDateRange } from "@/lib/date-utils";
+import { shouldShowJobNewBadge } from "@/lib/job-new-badge";
 import { readJobsViewMode, writeJobsViewMode } from "@/lib/jobs-view-mode";
 import { cn } from "@/lib/utils";
 import { useJobFiltersStore } from "@/store/job-filters";
@@ -113,15 +116,6 @@ function scrollToPageTop(): void {
   window.scrollTo({ top: 0, left: 0, behavior: reduceMotion ? "auto" : "smooth" });
 }
 
-function shouldShowJobNewBadge(
-  job: Job,
-  socketNewJobIds: Set<string>,
-  trackedInfo?: TrackedInfo,
-): boolean {
-  if (trackedInfo) return false;
-  return socketNewJobIds.has(job.id) || job.isNew;
-}
-
 // ─── Component ─────────────────────────────────────────────────────────────
 
 /**
@@ -134,6 +128,7 @@ function shouldShowJobNewBadge(
 export function JobsList() {
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
 
   // ── URL state ─────────────────────────────────────────────────────────────
   const {
@@ -254,12 +249,11 @@ export function JobsList() {
   const jobs = useMemo(() => jobsQuery.data?.jobs ?? [], [jobsQuery.data]);
 
   const processJobsSnapshot = useRealtimeJobsStore((s) => s.processJobsSnapshot);
-  const clearSocketNew = useRealtimeJobsStore((s) => s.clearSocketNew);
   const socketNewJobIds = useRealtimeJobsStore((s) => s.socketNewJobIds);
   const newJobsCount = socketNewJobIds.size;
 
   useEffect(() => {
-    processJobsSnapshot(jobs.map((job) => job.id));
+    processJobsSnapshot(jobs.map((job) => ({ id: job.id, isNew: job.isNew })));
   }, [jobs, processJobsSnapshot]);
   useEffect(() => {
     if (!jobsQuery.error) return;
@@ -391,26 +385,28 @@ export function JobsList() {
 
   const handleApplyWithBadgeClear = useCallback(
     (job: Job) => {
-      clearSocketNew(job.id);
       handleApplyClick(job);
+      void acknowledgeJobNewBadge(queryClient, job.id, { isNew: job.isNew });
     },
-    [clearSocketNew, handleApplyClick],
+    [handleApplyClick, queryClient],
   );
 
   const handleMarkAppliedWithBadgeClear = useCallback(
     (job: Job) => {
-      clearSocketNew(job.id);
       void handleMarkApplied(job);
+      void acknowledgeJobNewBadge(queryClient, job.id, { isNew: job.isNew });
     },
-    [clearSocketNew, handleMarkApplied],
+    [handleMarkApplied, queryClient],
   );
 
   const handleOpenDetail = useCallback(
     (jobId: string) => {
-      clearSocketNew(jobId);
+      // Open first — never block the panel on acknowledge / cache updates.
       openDetail(jobId);
+      const job = jobs.find((j) => j.id === jobId);
+      void acknowledgeJobNewBadge(queryClient, jobId, { isNew: job?.isNew });
     },
-    [clearSocketNew, openDetail],
+    [jobs, openDetail, queryClient],
   );
 
   // ─────────────────────────────────────────────────────────────────────────

@@ -32,7 +32,7 @@ export type Job = {
   isRemote: boolean;
   applyUrl: string;
   atsStatus: JobAtsStatus;
-  /** From API `is_new` — recently discovered listing. */
+  /** From API `is_new` (not `ats_status`) — discovery New badge until acknowledged. */
   isNew: boolean;
   saved: boolean;
   salary: string | null;
