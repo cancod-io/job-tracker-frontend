@@ -90,9 +90,10 @@ export function useRealtimeJobsSync() {
       ingestDebounceRef.current = window.setTimeout(() => {
         ingestDebounceRef.current = null;
         invalidateJobsList();
+        void queryClient.invalidateQueries({ queryKey: ["jobs-new-count"] });
       }, JOBS_INGEST_DEBOUNCE_MS);
     },
-    [invalidateJobsList, router],
+    [invalidateJobsList, queryClient, router],
   );
 
   const onJobsIngested = useCallback(

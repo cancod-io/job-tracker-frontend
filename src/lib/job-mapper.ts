@@ -1,4 +1,5 @@
 import { formatRelativeTime } from "@/lib/format-relative-time";
+import { htmlToPlainText } from "@/lib/html-to-plain-text";
 import { normalizeAtsStatusFromApi, type ApiJobListItem } from "@/types/api-jobs";
 import type { Job } from "@/types/job";
 
@@ -98,7 +99,7 @@ export function mapApiJobListItemToJob(item: ApiJobListItem): Job {
     isNew: item.is_new === true,
     saved: false,
     salary: item.salary?.trim() || null,
-    description: (item.description ?? "").trim(),
+    description: htmlToPlainText(item.description ?? ""),
     publisher: item.raw_payload?.job_publisher?.trim() || null,
     googleJobUrl: item.raw_payload?.job_google_link?.trim() || null,
     employerWebsite: item.raw_payload?.employer_website?.trim() || null,

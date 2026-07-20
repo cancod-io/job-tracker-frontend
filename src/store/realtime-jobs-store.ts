@@ -15,10 +15,14 @@ type RealtimeJobsState = {
   acknowledgedJobIds: Set<string>;
   knownJobIds: Set<string>;
   snapshotInitialized: boolean;
+  /** True briefly after a WS ingest until the jobs list snapshot catches up. */
   ingestPending: boolean;
+  /** Amber “just landed” banner — set on ingest, cleared by dismiss / empty count. */
+  ingestBannerVisible: boolean;
   hydrateForUser: (userId: number) => void;
   handleJobsIngested: (payload: JobsIngestedPayload) => boolean;
   processJobsSnapshot: (jobs: JobSnapshotRow[]) => void;
+  dismissIngestBanner: () => void;
   /** Mark a job as seen for this session and drop socket highlight. */
   markJobAcknowledged: (jobId: string) => void;
   clearSocketNew: (jobId: string) => void;
@@ -50,8 +54,16 @@ export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
   knownJobIds: new Set<string>(),
   snapshotInitialized: false,
   ingestPending: false,
+  ingestBannerVisible: false,
 
   hydrateForUser(userId) {
+    const prev = get().activeUserId;
+    // Only reset when the signed-in user actually changes (not on token refresh).
+    if (prev === userId) {
+      clearLegacyNewBadgeStorage(userId);
+      return;
+    }
+
     clearLegacyNewBadgeStorage(userId);
     set({
       activeUserId: userId,
@@ -60,6 +72,7 @@ export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
       knownJobIds: new Set(EMPTY_SET),
       snapshotInitialized: false,
       ingestPending: false,
+      ingestBannerVisible: false,
     });
   },
 
@@ -72,65 +85,53 @@ export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
     const { knownJobIds, acknowledgedJobIds } = state;
 
     for (const id of addedJobIds) {
-      if (!knownJobIds.has(id) && !acknowledgedJobIds.has(id)) {
+      if (!acknowledgedJobIds.has(id)) {
         socketNewJobIds.add(id);
       }
     }
 
     set({
       ingestPending: true,
+      ingestBannerVisible: true,
       socketNewJobIds,
+      // Keep knownJobIds; do not treat ingest ids as already-seen.
+      knownJobIds,
     });
     return true;
   },
 
   processJobsSnapshot(jobs) {
     const state = get();
-    const jobIds = jobs.map((job) => job.id);
     const acknowledgedJobIds = state.acknowledgedJobIds;
-
-    if (!state.snapshotInitialized) {
-      const socketNewJobIds = new Set(
-        jobs.filter((job) => job.isNew && !acknowledgedJobIds.has(job.id)).map((job) => job.id),
-      );
-      set({
-        snapshotInitialized: true,
-        knownJobIds: new Set(jobIds),
-        socketNewJobIds,
-      });
-      return;
-    }
-
     const socketNewJobIds = new Set(state.socketNewJobIds);
     const knownJobIds = new Set(state.knownJobIds);
 
-    // Sync with API `is_new`, but never revive a job the user already acknowledged.
+    // Merge this *page* into highlights — never replace the global set with
+    // only the current page (that made the badge count page-scoped).
     for (const job of jobs) {
+      knownJobIds.add(job.id);
       if (job.isNew && !acknowledgedJobIds.has(job.id)) {
         socketNewJobIds.add(job.id);
-      } else {
+      } else if (!job.isNew) {
         socketNewJobIds.delete(job.id);
       }
     }
 
-    if (!state.ingestPending) {
-      for (const id of jobIds) knownJobIds.add(id);
-      set({ knownJobIds, socketNewJobIds });
-      return;
-    }
-
-    for (const job of jobs) {
-      if (!knownJobIds.has(job.id) && job.isNew && !acknowledgedJobIds.has(job.id)) {
-        socketNewJobIds.add(job.id);
-      }
-      knownJobIds.add(job.id);
-    }
+    const keepBanner =
+      state.ingestBannerVisible &&
+      (socketNewJobIds.size > 0 || state.ingestPending);
 
     set({
-      socketNewJobIds,
+      snapshotInitialized: true,
       knownJobIds,
+      socketNewJobIds,
       ingestPending: false,
+      ingestBannerVisible: keepBanner,
     });
+  },
+
+  dismissIngestBanner() {
+    set({ ingestBannerVisible: false, ingestPending: false });
   },
 
   markJobAcknowledged(jobId) {
@@ -146,7 +147,13 @@ export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
     acknowledgedJobIds.add(trimmed);
     knownJobIds.add(trimmed);
 
-    set({ socketNewJobIds, acknowledgedJobIds, knownJobIds });
+    set({
+      socketNewJobIds,
+      acknowledgedJobIds,
+      knownJobIds,
+      ingestBannerVisible:
+        state.ingestBannerVisible && socketNewJobIds.size > 0,
+    });
   },
 
   clearSocketNew(jobId) {
@@ -167,7 +174,13 @@ export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
 
     if (!changed) return;
 
-    set({ socketNewJobIds, acknowledgedJobIds, knownJobIds });
+    set({
+      socketNewJobIds,
+      acknowledgedJobIds,
+      knownJobIds,
+      ingestBannerVisible:
+        state.ingestBannerVisible && socketNewJobIds.size > 0,
+    });
   },
 
   isSocketNew(jobId) {
@@ -190,6 +203,7 @@ export const useRealtimeJobsStore = create<RealtimeJobsState>((set, get) => ({
       knownJobIds: new Set(EMPTY_SET),
       snapshotInitialized: false,
       ingestPending: false,
+      ingestBannerVisible: false,
     });
   },
 }));
