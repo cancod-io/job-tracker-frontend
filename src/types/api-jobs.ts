@@ -20,7 +20,7 @@ export type ApiJobListItem = {
   /** Legacy / alternate title field. */
   title?: string;
   company: string;
-  /** Upstream scrape / ingest source id (e.g. `fantastic_jobs`) — use for filtering. */
+  /** Upstream scrape / ingest source id (e.g. `serpapi`) — use for filtering. */
   source?: string | null;
   /** Human-readable source label from the API — use for display. */
   source_label?: string | null;
