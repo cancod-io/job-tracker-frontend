@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, LogOut, UserRound } from "lucide-react";
+import { ChevronDown, KeyRound, LogOut, UserRound } from "lucide-react";
 import { LOGIN_PATH, REGISTER_PATH } from "@/config/auth-routes";
 import { useAuth } from "@/providers/auth-provider";
 import { useProfileQuery } from "@/hooks/use-profile";
@@ -124,6 +124,15 @@ export function UserProfileMenu() {
           >
             <UserRound className="size-4 text-muted-foreground" aria-hidden />
             Profile Settings
+          </Link>
+          <Link
+            href="/credentials"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className={cn(menuItemClass, "hover:bg-muted")}
+          >
+            <KeyRound className="size-4 text-muted-foreground" aria-hidden />
+            My credentials
           </Link>
           <div className="my-1 border-t border-border" />
           <button
