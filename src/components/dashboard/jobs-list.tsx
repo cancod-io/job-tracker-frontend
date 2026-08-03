@@ -23,11 +23,13 @@ import { useRealtimeJobsStore } from "@/store/realtime-jobs-store";
 import { Skeleton } from "@/components/ui/skeleton";
 import { JobCard } from "@/components/jobs/job-card";
 import { JobCardSkeleton } from "@/components/jobs/job-card-skeleton";
+import { JOB_LIST_ROW_GRID } from "@/components/jobs/job-list-row";
 import { JobDetailPanel } from "@/components/jobs/job-detail-panel";
 import { JobsPagination } from "@/components/jobs/jobs-pagination";
 import { JobsToolbar } from "@/components/jobs/jobs-toolbar";
 import { FetchRunsTimeline } from "@/components/jobs/fetch-runs-timeline";
 import { FetchChangeTabs } from "@/components/jobs/fetch-change-tabs";
+import { JobsStackTabs } from "@/components/jobs/jobs-stack-tabs";
 import { ApplyConfirmBanner } from "@/components/jobs/apply-confirm-banner";
 import {
   buildJobsListHref,
@@ -35,6 +37,7 @@ import {
   type JobsViewMode,
   type PageSizeOption,
   type TrackedInfo,
+  type ApiJobsStack,
   DETAIL_TRANSITION_MS,
 } from "@/components/jobs/types";
 import type { ApiJobsSortBy } from "@/types/api-jobs";
@@ -135,6 +138,7 @@ export function JobsList() {
     page,
     sortBy,
     source,
+    stack,
     perPage,
     fetchRunId,
     fetchChange,
@@ -170,7 +174,7 @@ export function JobsList() {
   const fetchApplications = useApplicationsStore((s) => s.fetchApplications);
 
   // ── View mode (persisted to localStorage) ─────────────────────────────────
-  const [viewMode, setViewModeState] = useState<JobsViewMode>("card");
+  const [viewMode, setViewModeState] = useState<JobsViewMode>("list");
   useEffect(() => {
     setViewModeState(readJobsViewMode());
   }, []);
@@ -187,6 +191,7 @@ export function JobsList() {
   const prevExperienceRef = useRef(experience);
   const prevJobTypeRef = useRef(jobType);
   const prevSourceRef = useRef(source);
+  const prevStackRef = useRef(stack);
   const prevFetchRunIdRef = useRef(fetchRunId);
   const prevFetchChangeRef = useRef(fetchChange);
   useEffect(() => {
@@ -194,12 +199,14 @@ export function JobsList() {
     const experienceChanged = prevExperienceRef.current !== experience;
     const jobTypeChanged = prevJobTypeRef.current !== jobType;
     const sourceChanged = prevSourceRef.current !== source;
+    const stackChanged = prevStackRef.current !== stack;
     const fetchRunChanged = prevFetchRunIdRef.current !== fetchRunId;
     const fetchChangeChanged = prevFetchChangeRef.current !== fetchChange;
     prevDebouncedQueryRef.current = debouncedQuery;
     prevExperienceRef.current = experience;
     prevJobTypeRef.current = jobType;
     prevSourceRef.current = source;
+    prevStackRef.current = stack;
     prevFetchRunIdRef.current = fetchRunId;
     prevFetchChangeRef.current = fetchChange;
 
@@ -208,6 +215,7 @@ export function JobsList() {
       !experienceChanged &&
       !jobTypeChanged &&
       !sourceChanged &&
+      !stackChanged &&
       !fetchRunChanged &&
       !fetchChangeChanged
     ) {
@@ -222,6 +230,7 @@ export function JobsList() {
     experience,
     jobType,
     source,
+    stack,
     fetchRunId,
     fetchChange,
     page,
@@ -236,6 +245,7 @@ export function JobsList() {
     perPage,
     sortBy,
     source,
+    stack,
     query: debouncedQuery,
     fetchRunId,
     fetchChange,
@@ -321,6 +331,7 @@ export function JobsList() {
       page?: number;
       sortBy?: ApiJobsSortBy;
       source?: string;
+      stack?: ApiJobsStack;
       perPage?: PageSizeOption;
       fetchRunId?: number | null;
       fetchChange?: ApiFetchChangeType | null;
@@ -371,7 +382,7 @@ export function JobsList() {
     // Identity of `closeDetail` & `visibleJobs` would re-fire this on every render;
     // we only want to fire on the inputs that change the result set.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedQuery, page, perPage, sortBy, source, fetchRunId, fetchChange, postedFrom, postedTo, experience, jobType]);
+  }, [debouncedQuery, page, perPage, sortBy, source, stack, fetchRunId, fetchChange, postedFrom, postedTo, experience, jobType]);
 
   // ── Apply flow ────────────────────────────────────────────────────────────
   const {
@@ -457,6 +468,11 @@ export function JobsList() {
         </div>
       ) : null}
 
+      <JobsStackTabs
+        activeStack={stack}
+        onChange={(next) => navigateList({ stack: next, page: 1 })}
+      />
+
       <JobsToolbar
         total={total}
         loading={loading}
@@ -501,12 +517,12 @@ export function JobsList() {
 
       <JobsPagination placement="top" {...sharedPaginationProps} />
 
-      {/* Job cards */}
+      {/* Job cards / table */}
       <div
         className={cn(
           "min-w-0",
           viewMode === "list"
-            ? "space-y-3"
+            ? "overflow-x-auto rounded-xl border border-border/80 bg-card"
             : // `auto-fill` (not `auto-fit`) keeps empty tracks so a lone result
               // doesn't stretch to fill the row. Max column width is capped
               // (22rem) so cards stay a consistent size at any result count.
@@ -514,48 +530,72 @@ export function JobsList() {
         )}
         aria-busy={showCardSkeletons}
       >
-        {showCardSkeletons
-          ? Array.from({ length: Math.min(perPage, 8) }).map((_, idx) => (
-              <JobCardSkeleton key={`job-skeleton-${idx}`} viewMode={viewMode} />
-            ))
-          : visibleJobs.map((job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                viewMode={viewMode}
-                selected={selectedId === job.id}
-                showNewBadge={shouldShowJobNewBadge(
-                  job,
-                  socketNewJobIds,
-                  acknowledgedJobIds,
-                  trackedJobsMap.get(Number(job.id)),
-                )}
-                trackedInfo={trackedJobsMap.get(Number(job.id))}
-                onSelect={() => handleOpenDetail(job.id)}
-                onApplyClick={handleApplyWithBadgeClear}
-                onMarkApplied={handleMarkAppliedWithBadgeClear}
-                markingApplied={markingAppliedIds.has(job.id)}
-              />
-            ))}
-
-        {!showCardSkeletons && visibleJobs.length === 0 ? (
+        {viewMode === "list" ? (
           <div
-            className="col-span-full rounded-2xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground"
-            role="status"
-            aria-live="polite"
+            className={cn(
+              JOB_LIST_ROW_GRID,
+              "border-b border-border/70 bg-muted/30 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground",
+            )}
+            role="row"
           >
-            {renderEmptyStateMessage({
-              query: debouncedQuery,
-              source,
-              postedFrom,
-              postedTo,
-              fetchChange,
-              hasClientFilters: experience !== "All" || jobType !== "All",
-              total,
-              pageJobs: jobs.length,
-            })}
+            <span className="sr-only">Logo</span>
+            <span>Job</span>
+            <span>Location</span>
+            <span>Type</span>
+            <span>Salary</span>
+            <span>Source</span>
+            <span className="text-right">Posted</span>
+            <span className="text-right">Actions</span>
           </div>
         ) : null}
+        <div className={viewMode === "list" ? "divide-y divide-border/60" : "contents"}>
+          {showCardSkeletons
+            ? Array.from({ length: Math.min(perPage, 8) }).map((_, idx) => (
+                <JobCardSkeleton key={`job-skeleton-${idx}`} viewMode={viewMode} />
+              ))
+            : visibleJobs.map((job) => (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  viewMode={viewMode}
+                  selected={selectedId === job.id}
+                  showNewBadge={shouldShowJobNewBadge(
+                    job,
+                    socketNewJobIds,
+                    acknowledgedJobIds,
+                    trackedJobsMap.get(Number(job.id)),
+                  )}
+                  trackedInfo={trackedJobsMap.get(Number(job.id))}
+                  onSelect={() => handleOpenDetail(job.id)}
+                  onApplyClick={handleApplyWithBadgeClear}
+                  onMarkApplied={handleMarkAppliedWithBadgeClear}
+                  markingApplied={markingAppliedIds.has(job.id)}
+                />
+              ))}
+
+          {!showCardSkeletons && visibleJobs.length === 0 ? (
+            <div
+              className={cn(
+                "p-10 text-center text-sm text-muted-foreground",
+                viewMode !== "list" &&
+                  "col-span-full rounded-2xl border border-dashed border-border bg-card",
+              )}
+              role="status"
+              aria-live="polite"
+            >
+              {renderEmptyStateMessage({
+                query: debouncedQuery,
+                source,
+                postedFrom,
+                postedTo,
+                fetchChange,
+                hasClientFilters: experience !== "All" || jobType !== "All",
+                total,
+                pageJobs: jobs.length,
+              })}
+            </div>
+          ) : null}
+        </div>
       </div>
 
       <JobsPagination placement="bottom" {...sharedPaginationProps} />
@@ -661,11 +701,28 @@ export function JobsListSkeleton() {
         </div>
       </div>
 
-      {/* Card grid skeleton — same shape as a real card */}
-      <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,19rem),22rem))]">
-        {Array.from({ length: FIRST_LOAD_SKELETON_COUNT }).map((_, i) => (
-          <JobCardSkeleton key={`first-load-skel-${i}`} viewMode="card" />
-        ))}
+      {/* List skeleton — matches default list view */}
+      <div className="overflow-x-auto rounded-xl border border-border/80 bg-card">
+        <div
+          className={cn(
+            JOB_LIST_ROW_GRID,
+            "border-b border-border/70 bg-muted/30 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground",
+          )}
+        >
+          <span className="sr-only">Logo</span>
+          <span>Job</span>
+          <span>Location</span>
+          <span>Type</span>
+          <span>Salary</span>
+          <span>Source</span>
+          <span className="text-right">Posted</span>
+          <span className="text-right">Actions</span>
+        </div>
+        <div className="divide-y divide-border/60">
+          {Array.from({ length: FIRST_LOAD_SKELETON_COUNT }).map((_, i) => (
+            <JobCardSkeleton key={`first-load-skel-${i}`} viewMode="list" />
+          ))}
+        </div>
       </div>
     </section>
   );

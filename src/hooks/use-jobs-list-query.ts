@@ -4,7 +4,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { fetchJobsList } from "@/lib/jobs-api";
 import { mapApiJobListItemToJob } from "@/lib/job-mapper";
 import type { Job } from "@/types/job";
-import type { ApiJobsSortBy } from "@/types/api-jobs";
+import type { ApiJobsSortBy, ApiJobsStack } from "@/types/api-jobs";
 import type { ApiFetchChangeType } from "@/types/api-fetch-runs";
 
 type UseJobsListQueryParams = {
@@ -12,6 +12,7 @@ type UseJobsListQueryParams = {
   perPage: number;
   sortBy: ApiJobsSortBy;
   source: string;
+  stack: ApiJobsStack;
   query: string;
   fetchRunId: number | null;
   fetchChange: ApiFetchChangeType | null;
@@ -31,6 +32,7 @@ export function useJobsListQuery({
   perPage,
   sortBy,
   source,
+  stack,
   query,
   fetchRunId,
   fetchChange,
@@ -47,6 +49,7 @@ export function useJobsListQuery({
       perPage,
       sortBy,
       trimmedSource,
+      stack,
       query,
       fetchRunId,
       fetchChange,
@@ -61,6 +64,7 @@ export function useJobsListQuery({
         offset,
         sort_by: sortBy,
         source: trimmedSource || undefined,
+        stack,
         include_inactive: false,
         include_duplicates: false,
         q: query.trim() || undefined,

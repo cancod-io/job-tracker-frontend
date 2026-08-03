@@ -65,6 +65,20 @@ export const API_JOBS_SORT_BY = [
 ] as const;
 export type ApiJobsSortBy = (typeof API_JOBS_SORT_BY)[number];
 
+/** `GET /api/v1/jobs` — `stack` query values. */
+export const API_JOBS_STACKS = ["shopify", "ai_fullstack"] as const;
+export type ApiJobsStack = (typeof API_JOBS_STACKS)[number];
+export const DEFAULT_JOBS_STACK: ApiJobsStack = "shopify";
+
+export function jobsStackLabel(stack: ApiJobsStack): string {
+  switch (stack) {
+    case "shopify":
+      return "Shopify";
+    case "ai_fullstack":
+      return "AI Full Stack";
+  }
+}
+
 export function jobsSortByLabel(sortBy: ApiJobsSortBy): string {
   switch (sortBy) {
     case "new":
@@ -113,6 +127,8 @@ export type FetchJobsListParams = {
   sort_by?: ApiJobsSortBy;
   /** Exact match on scraper/source name; omit for all sources. */
   source?: string;
+  /** Job stack filter — `shopify` or `ai_fullstack`. */
+  stack?: ApiJobsStack;
   include_inactive?: boolean;
   include_duplicates?: boolean;
   q?: string;

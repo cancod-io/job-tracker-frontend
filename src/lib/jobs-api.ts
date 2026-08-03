@@ -26,6 +26,8 @@ function appendJobsQueryParams(search: URLSearchParams, params: FetchJobsListPar
   const source = params.source?.trim();
   if (source) search.set("source", source);
 
+  if (params.stack) search.set("stack", params.stack);
+
   const q = params.q?.trim();
   if (q) search.set("q", q);
   const title = params.title?.trim();

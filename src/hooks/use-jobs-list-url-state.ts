@@ -7,9 +7,11 @@ import {
   parsePerPageFromSearchParams,
   parseSortByFromSearchParams,
   parseSourceFromSearchParams,
+  parseStackFromSearchParams,
   parseFetchChangeFromSearchParams,
   parseFetchRunIdFromSearchParams,
   type PageSizeOption,
+  type ApiJobsStack,
 } from "@/components/jobs/types";
 import type { ApiJobsSortBy } from "@/types/api-jobs";
 import type { ApiFetchChangeType } from "@/types/api-fetch-runs";
@@ -18,6 +20,7 @@ export type JobsListUrlState = {
   page: number;
   sortBy: ApiJobsSortBy;
   source: string;
+  stack: ApiJobsStack;
   perPage: PageSizeOption;
   fetchRunId: number | null;
   fetchChange: ApiFetchChangeType | null;
@@ -26,7 +29,7 @@ export type JobsListUrlState = {
 };
 
 /**
- * Reads page, sort_by, source, and per_page from the URL in a single allocation,
+ * Reads page, sort_by, source, stack, and per_page from the URL in a single allocation,
  * memoized against the serialized search-params string.
  */
 export function useJobsListUrlState(): JobsListUrlState {
@@ -38,6 +41,7 @@ export function useJobsListUrlState(): JobsListUrlState {
       page: parsePageFromSearchParams(sp),
       sortBy: parseSortByFromSearchParams(sp),
       source: parseSourceFromSearchParams(sp),
+      stack: parseStackFromSearchParams(sp),
       perPage: parsePerPageFromSearchParams(sp),
       fetchRunId: parseFetchRunIdFromSearchParams(sp),
       fetchChange: parseFetchChangeFromSearchParams(sp),
