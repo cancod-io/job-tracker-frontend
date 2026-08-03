@@ -11,12 +11,15 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { RealtimeConnectionIndicator } from "@/components/realtime/realtime-connection-indicator";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useRealtimeJobsStore } from "@/store/realtime-jobs-store";
+import { useNewJobsCountQuery } from "@/hooks/use-new-jobs-count-query";
 import { cn } from "@/lib/utils";
 
 export function MainAppShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const socketNewJobIds = useRealtimeJobsStore((s) => s.socketNewJobIds);
-  const newJobsCount = socketNewJobIds.size;
+  const { data: apiNewJobsTotal = 0 } = useNewJobsCountQuery();
+  // Prefer API-wide total; fall back to in-session socket ids after a live ingest.
+  const newJobsCount = Math.max(apiNewJobsTotal, socketNewJobIds.size);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
