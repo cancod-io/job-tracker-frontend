@@ -1,9 +1,22 @@
 import type { ApiApplicationStatus } from "@/types/application";
-import { API_JOBS_SORT_BY, type ApiJobsSortBy } from "@/types/api-jobs";
+import {
+  API_JOBS_SORT_BY,
+  API_JOBS_STACKS,
+  DEFAULT_JOBS_STACK,
+  type ApiJobsSortBy,
+  type ApiJobsStack,
+} from "@/types/api-jobs";
 import {
   API_FETCH_CHANGE_TYPES,
   type ApiFetchChangeType,
 } from "@/types/api-fetch-runs";
+
+export {
+  DEFAULT_JOBS_STACK,
+  API_JOBS_STACKS,
+  type ApiJobsStack,
+  jobsStackLabel,
+} from "@/types/api-jobs";
 
 // ─── View mode ─────────────────────────────────────────────────────────────
 
@@ -53,6 +66,7 @@ export const TRACKED_STATUS_BADGE: Record<
 export const URL_PAGE_KEY = "page";
 export const URL_SORT_BY_KEY = "sort_by";
 export const URL_SOURCE_KEY = "source";
+export const URL_STACK_KEY = "stack";
 export const URL_PER_PAGE_KEY = "per_page";
 export const URL_FETCH_RUN_ID_KEY = "fetch_run_id";
 export const URL_FETCH_CHANGE_KEY = "fetch_change";
@@ -127,6 +141,17 @@ export function parseSourceFromSearchParams(sp: URLSearchParams): string {
   return sp.get(URL_SOURCE_KEY)?.trim() ?? ALL_JOB_SOURCES_VALUE;
 }
 
+function isApiJobsStack(value: string): value is ApiJobsStack {
+  return (API_JOBS_STACKS as readonly string[]).includes(value);
+}
+
+/** Active job stack tab; defaults to Shopify. */
+export function parseStackFromSearchParams(sp: URLSearchParams): ApiJobsStack {
+  const raw = sp.get(URL_STACK_KEY)?.trim();
+  if (raw && isApiJobsStack(raw)) return raw;
+  return DEFAULT_JOBS_STACK;
+}
+
 function isApiFetchChangeType(value: string): value is ApiFetchChangeType {
   return (API_FETCH_CHANGE_TYPES as readonly string[]).includes(value);
 }
@@ -153,6 +178,7 @@ export function buildJobsListHref(
     page?: number;
     sortBy?: ApiJobsSortBy;
     source?: string;
+    stack?: ApiJobsStack;
     perPage?: PageSizeOption;
     fetchRunId?: number | null;
     fetchChange?: ApiFetchChangeType | null;
@@ -163,6 +189,7 @@ export function buildJobsListHref(
   const sortBy = patch.sortBy ?? parseSortByFromSearchParams(params);
   const source =
     patch.source !== undefined ? patch.source.trim() : parseSourceFromSearchParams(params);
+  const stack = patch.stack ?? parseStackFromSearchParams(params);
   const perPage = patch.perPage ?? parsePerPageFromSearchParams(params);
   const fetchChange =
     patch.fetchChange !== undefined
@@ -183,6 +210,9 @@ export function buildJobsListHref(
 
   if (!source) params.delete(URL_SOURCE_KEY);
   else params.set(URL_SOURCE_KEY, source);
+
+  if (stack === DEFAULT_JOBS_STACK) params.delete(URL_STACK_KEY);
+  else params.set(URL_STACK_KEY, stack);
 
   if (perPage === DEFAULT_PAGE_SIZE) params.delete(URL_PER_PAGE_KEY);
   else params.set(URL_PER_PAGE_KEY, String(perPage));

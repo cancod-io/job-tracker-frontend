@@ -3,8 +3,9 @@ import { cn } from "@/lib/utils";
 import { companyInitials } from "@/lib/company-utils";
 import { JobApplyButton } from "@/components/jobs/job-apply-button";
 import { JobMarkAppliedButton } from "@/components/jobs/job-mark-applied-button";
+import { JOB_LIST_ROW_GRID } from "@/components/jobs/job-list-row";
 import { TrackedStatusBadge } from "@/components/jobs/tracked-status-badge";
-import { JobNewBadge, jobNewHighlightClassName } from "@/components/jobs/job-new-badge";
+import { JobNewBadge } from "@/components/jobs/job-new-badge";
 import { JobSourceBadge } from "@/components/jobs/job-source-badge";
 import type { TrackedInfo, JobsViewMode } from "@/components/jobs/types";
 import type { Job } from "@/types/job";
@@ -60,10 +61,9 @@ export function JobCard({
     "rounded-xl border bg-card text-left shadow-sm outline-none",
     "transition-[transform,box-shadow,border-color] duration-150 motion-reduce:transition-none",
     "hover:border-primary/45 hover:shadow-md motion-reduce:hover:translate-y-0",
-    showNewBadge && jobNewHighlightClassName(),
     selected
       ? "border-primary/55 bg-primary/5 ring-2 ring-primary/25 shadow-md"
-      : !showNewBadge && "border-border/80",
+      : "border-border/80",
   );
 
   const LogoEl = () =>
@@ -85,14 +85,20 @@ export function JobCard({
       </div>
     );
 
-  /* ── LIST view ────────────────────────────────────────────────── */
+  /* ── LIST view (table-style row) ──────────────────────────────── */
   if (viewMode === "list") {
+    const typeLabel =
+      job.employmentLabel !== "—"
+        ? job.employmentLabel
+        : job.isRemote
+          ? "Remote"
+          : "—";
+
     return (
       <article
         className={cn(
-          base,
-          "cursor-pointer hover:-translate-y-px focus-visible:ring-2 focus-visible:ring-primary/45",
-          showNewBadge && "border-l-4 border-l-amber-400",
+          "cursor-pointer outline-none transition-colors focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/45",
+          selected ? "bg-primary/5" : "hover:bg-muted/40",
         )}
         onClick={handleCardClick}
         onKeyDown={(e) => handleCardKeyDown(e, onSelect)}
@@ -101,74 +107,71 @@ export function JobCard({
         aria-label={`Open details for ${job.title} at ${job.company}`}
         aria-current={selected ? "true" : undefined}
       >
-        <div className="flex items-center gap-3 px-4 py-2.5">
-          <div className="size-9 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+        <div className={JOB_LIST_ROW_GRID}>
+          {/* Logo */}
+          <div className="size-8 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
             <LogoEl />
           </div>
 
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-baseline gap-2">
+          {/* Job + company */}
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-2">
               <h4 className="truncate text-[13px] font-semibold leading-snug text-foreground">
                 {job.title}
               </h4>
-              {showNewBadge ? <JobNewBadge /> : null}
-              <span className="shrink-0 text-[11px] text-muted-foreground">{job.datePosted}</span>
+              {showNewBadge ? <JobNewBadge variant="list" /> : null}
             </div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-px text-xs text-muted-foreground">
-              <span className="font-medium text-foreground/80">{job.company}</span>
-              {job.location ? (
-                <>
-                  <span aria-hidden className="text-muted-foreground/40">·</span>
-                  <span className="flex items-center gap-0.5">
-                    <MapPin className="size-3 shrink-0 opacity-60" aria-hidden />
-                    {job.location}
-                  </span>
-                </>
-              ) : null}
-              {job.salary ? (
-                <>
-                  <span aria-hidden className="text-muted-foreground/40">·</span>
-                  <span className="font-medium text-foreground/80">{job.salary}</span>
-                </>
-              ) : null}
-              {job.isRemote ? (
-                <span className="inline-flex items-center rounded-md bg-emerald-500/10 px-1.5 py-px text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
-                  Remote
-                </span>
-              ) : null}
-              {job.employmentLabel !== "—" ? (
-                <span className="inline-flex items-center rounded-md bg-muted/80 px-1.5 py-px text-[10px] font-medium">
-                  {job.employmentLabel}
-                </span>
-              ) : null}
-              {job.experienceLevel !== "—" ? (
-                <span className="inline-flex items-center rounded-md bg-muted/80 px-1.5 py-px text-[10px] font-medium">
-                  {job.experienceLevel}
-                </span>
-              ) : null}
-              {job.sourceLabel ? <JobSourceBadge label={job.sourceLabel} /> : null}
-              {trackedInfo ? (
-                <TrackedStatusBadge
-                  status={trackedInfo.status}
-                  variant="pill"
-                  className="px-1.5 py-px text-[10px]"
-                />
-              ) : null}
-            </div>
-            {job.description ? (
-              <p className="mt-px truncate text-[11px] text-muted-foreground/60">
-                {job.description}
-              </p>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">{job.company}</p>
+          </div>
+
+          {/* Location */}
+          <div className="min-w-0 truncate text-xs text-muted-foreground">
+            {job.location ? (
+              <span className="inline-flex max-w-full items-center gap-1">
+                <MapPin className="size-3 shrink-0 opacity-60" aria-hidden />
+                <span className="truncate">{job.location}</span>
+              </span>
+            ) : (
+              <span className="text-muted-foreground/50">—</span>
+            )}
+          </div>
+
+          {/* Type */}
+          <div className="min-w-0 truncate text-xs text-muted-foreground">
+            <span className="truncate">{typeLabel}</span>
+            {job.isRemote && job.employmentLabel !== "—" ? (
+              <span className="mt-0.5 block truncate text-[10px] text-emerald-700 dark:text-emerald-400">
+                Remote
+              </span>
             ) : null}
           </div>
 
+          {/* Salary */}
+          <div className="min-w-0 truncate text-xs font-medium text-foreground/85">
+            {job.salary ?? <span className="font-normal text-muted-foreground/50">—</span>}
+          </div>
+
+          {/* Source */}
+          <div className="flex min-w-0 items-center justify-start">
+            {job.sourceLabel ? (
+              <JobSourceBadge label={job.sourceLabel} />
+            ) : (
+              <span className="text-xs text-muted-foreground/50">—</span>
+            )}
+          </div>
+
+          {/* Date */}
+          <div className="truncate text-right text-[11px] tabular-nums text-muted-foreground">
+            {job.datePosted}
+          </div>
+
           {/* Actions */}
-          <div className="ml-2 flex shrink-0 items-center gap-1.5">
+          <div className="flex shrink-0 items-center justify-end gap-1">
             {trackedInfo ? (
               <TrackedStatusBadge
                 status={trackedInfo.status}
                 variant="button"
-                className="h-8 px-2.5 text-[11px]"
+                className="h-7 px-2 text-[11px]"
               />
             ) : (
               <>
@@ -176,12 +179,12 @@ export function JobCard({
                   job={job}
                   onMarkApplied={onMarkApplied}
                   loading={markingApplied}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-border bg-background px-2 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
                 />
                 <JobApplyButton
                   job={job}
                   onApplyClick={onApplyClick}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-[11px] font-semibold text-primary-foreground transition-[opacity,transform] hover:opacity-90 active:scale-[0.97]"
+                  className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-[11px] font-semibold text-primary-foreground transition-[opacity,transform] hover:opacity-90 active:scale-[0.97]"
                 />
               </>
             )}
@@ -190,7 +193,7 @@ export function JobCard({
               onClick={(e) => e.stopPropagation()}
               disabled
               className={cn(
-                "inline-flex size-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                "inline-flex size-7 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
                 "disabled:cursor-not-allowed disabled:opacity-60",
                 job.saved && "border-amber-400/50 bg-amber-400/10 text-amber-600 dark:text-amber-400",
               )}
