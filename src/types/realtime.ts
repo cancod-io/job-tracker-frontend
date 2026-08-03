@@ -20,9 +20,12 @@ export type JobsIngestedPayload = {
   run_id: string | null;
   scraper_name: string;
   added: number;
-  updated: number;
-  unchanged: number;
-  removed: number;
+  /** @deprecated always 0 — added-only model */
+  updated?: number;
+  /** @deprecated always 0 — added-only model */
+  unchanged?: number;
+  /** @deprecated always 0 — added-only model */
+  removed?: number;
   failed: number;
   blocked: number;
   duration_ms: number;
@@ -35,8 +38,11 @@ export type JobsIngestedPayload = {
     fetch_run_id: number;
     external_run_id: string | null;
     added: number;
-    updated: number;
-    unchanged: number;
-    removed: number;
+    /** @deprecated always 0 — added-only model */
+    updated?: number;
+    /** @deprecated always 0 — added-only model */
+    unchanged?: number;
+    /** @deprecated always 0 — added-only model */
+    removed?: number;
   }>;
 };

@@ -28,7 +28,6 @@ import { JobDetailPanel } from "@/components/jobs/job-detail-panel";
 import { JobsPagination } from "@/components/jobs/jobs-pagination";
 import { JobsToolbar } from "@/components/jobs/jobs-toolbar";
 import { FetchRunsTimeline } from "@/components/jobs/fetch-runs-timeline";
-import { FetchChangeTabs } from "@/components/jobs/fetch-change-tabs";
 import { JobsStackTabs } from "@/components/jobs/jobs-stack-tabs";
 import { ApplyConfirmBanner } from "@/components/jobs/apply-confirm-banner";
 import {
@@ -42,6 +41,7 @@ import {
 } from "@/components/jobs/types";
 import type { ApiJobsSortBy } from "@/types/api-jobs";
 import type { ApiFetchChangeType } from "@/types/api-fetch-runs";
+import { fetchRunEmptyMessage } from "@/types/api-fetch-runs";
 import type { ExperienceLevel, Job, JobType } from "@/types/job";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -81,6 +81,7 @@ function renderEmptyStateMessage(args: {
   postedFrom: string;
   postedTo: string;
   fetchChange: ApiFetchChangeType | null;
+  activeFetchRunAddedCount: number | null;
   hasClientFilters: boolean;
   total: number;
   pageJobs: number;
@@ -89,7 +90,10 @@ function renderEmptyStateMessage(args: {
   const sourceLabel = args.source.trim();
   const hasPostedRange = Boolean(args.postedFrom || args.postedTo);
   if (args.fetchChange && args.total === 0) {
-    return `No ${args.fetchChange} jobs in this fetch run. Try another change type or run.`;
+    if (args.activeFetchRunAddedCount === 0) {
+      return "No new jobs — all apply URLs already exist.";
+    }
+    return fetchRunEmptyMessage({ added_count: args.activeFetchRunAddedCount ?? 0 });
   }
   if (hasPostedRange && args.total === 0) {
     return `No jobs posted ${formatPostedDateRange(args.postedFrom, args.postedTo).toLowerCase()}. Try widening the date range.`;
@@ -507,14 +511,6 @@ export function JobsList() {
         />
       ) : null}
 
-      {activeFetchRun && fetchChange ? (
-        <FetchChangeTabs
-          run={activeFetchRun}
-          activeChange={fetchChange}
-          onChange={(next) => navigateList({ fetchChange: next, page: 1 })}
-        />
-      ) : null}
-
       <JobsPagination placement="top" {...sharedPaginationProps} />
 
       {/* Job cards / table */}
@@ -589,6 +585,7 @@ export function JobsList() {
                 postedFrom,
                 postedTo,
                 fetchChange,
+                activeFetchRunAddedCount: activeFetchRun?.added_count ?? null,
                 hasClientFilters: experience !== "All" || jobType !== "All",
                 total,
                 pageJobs: jobs.length,

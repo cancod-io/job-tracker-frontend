@@ -7,7 +7,6 @@ import {
   type ApiJobsStack,
 } from "@/types/api-jobs";
 import {
-  API_FETCH_CHANGE_TYPES,
   type ApiFetchChangeType,
 } from "@/types/api-fetch-runs";
 
@@ -152,15 +151,11 @@ export function parseStackFromSearchParams(sp: URLSearchParams): ApiJobsStack {
   return DEFAULT_JOBS_STACK;
 }
 
-function isApiFetchChangeType(value: string): value is ApiFetchChangeType {
-  return (API_FETCH_CHANGE_TYPES as readonly string[]).includes(value);
-}
-
-/** Active fetch diff filter; null means show all jobs for the source (no diff). */
+/** Active fetch diff filter; only `"added"` is supported (added-only ingest model). */
 export function parseFetchChangeFromSearchParams(sp: URLSearchParams): ApiFetchChangeType | null {
   const raw = sp.get(URL_FETCH_CHANGE_KEY)?.trim();
-  if (!raw || !isApiFetchChangeType(raw)) return null;
-  return raw;
+  if (raw === "added") return "added";
+  return null;
 }
 
 /** Selected fetch run; null means latest run when `fetch_change` is set. */
