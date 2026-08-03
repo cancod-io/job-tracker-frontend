@@ -29,8 +29,8 @@ import { JobDetailPanel } from "@/components/jobs/job-detail-panel";
 import { JobsPagination } from "@/components/jobs/jobs-pagination";
 import { JobsToolbar } from "@/components/jobs/jobs-toolbar";
 import { FetchRunsTimeline } from "@/components/jobs/fetch-runs-timeline";
-import { FetchChangeTabs } from "@/components/jobs/fetch-change-tabs";
 import { JobsStackTabs } from "@/components/jobs/jobs-stack-tabs";
+
 
 import { ApplyConfirmBanner } from "@/components/jobs/apply-confirm-banner";
 import {
@@ -600,6 +600,7 @@ export function JobsList() {
                 postedFrom,
                 postedTo,
                 fetchChange,
+                activeFetchRunAddedCount: activeFetchRun?.added_count ?? null,
                 hasClientFilters: experience !== "All" || jobType !== "All",
                 total,
                 pageJobs: jobs.length,
