@@ -141,6 +141,8 @@ export type FetchJobsListParams = {
   /** Inclusive posted-at range (`YYYY-MM-DD` keys converted to UTC ISO before send). */
   posted_from?: string;
   posted_to?: string;
+  /** When true, only jobs with `is_new=true` (for global new-count queries). */
+  is_new?: boolean;
 };
 
 export type JobSourceOption = {

@@ -26,7 +26,7 @@ import { JOBS_PATH } from "@/config/auth-routes";
 const JOBS_INGEST_DEBOUNCE_MS = 3_000;
 
 function isJobsIngestedPayload(payload: Record<string, unknown>): payload is JobsIngestedPayload {
-  return typeof payload.added === "number" && typeof payload.updated === "number";
+  return typeof payload.added === "number";
 }
 
 function isJobDeletedPayload(payload: Record<string, unknown>): payload is JobDeletedPayload {
@@ -90,9 +90,10 @@ export function useRealtimeJobsSync() {
       ingestDebounceRef.current = window.setTimeout(() => {
         ingestDebounceRef.current = null;
         invalidateJobsList();
+        void queryClient.invalidateQueries({ queryKey: ["jobs-new-count"] });
       }, JOBS_INGEST_DEBOUNCE_MS);
     },
-    [invalidateJobsList, router],
+    [invalidateJobsList, queryClient, router],
   );
 
   const onJobsIngested = useCallback(

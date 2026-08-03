@@ -22,10 +22,12 @@ export async function acknowledgeJobNewBadge(
 
   // 2) Optimistic list cache so `job.isNew` flips immediately.
   markJobAcknowledgedInJobsListCache(queryClient, trimmed);
+  void queryClient.invalidateQueries({ queryKey: ["jobs-new-count"] });
 
   // 3) Persist on the API (may 404 until backend ships the route).
   try {
     await acknowledgeJob(trimmed);
+    void queryClient.invalidateQueries({ queryKey: ["jobs-new-count"] });
     return true;
   } catch {
     return false;

@@ -41,6 +41,8 @@ function appendJobsQueryParams(search: URLSearchParams, params: FetchJobsListPar
     search.set("fetch_run_id", String(params.fetch_run_id));
   }
   if (params.fetch_change) search.set("fetch_change", params.fetch_change);
+  if (params.is_new === true) search.set("is_new", "true");
+  if (params.is_new === false) search.set("is_new", "false");
 
   appendPostedDateRange(search, params.posted_from, params.posted_to);
 }

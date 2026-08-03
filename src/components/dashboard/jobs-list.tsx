@@ -20,6 +20,7 @@ import { useJobsListUrlState } from "@/hooks/use-jobs-list-url-state";
 import { useSlideOverPanel } from "@/hooks/use-slide-over-panel";
 import { useApplyFlow } from "@/hooks/use-apply-flow";
 import { useRealtimeJobsStore } from "@/store/realtime-jobs-store";
+import { useNewJobsCountQuery } from "@/hooks/use-new-jobs-count-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { JobCard } from "@/components/jobs/job-card";
 import { JobCardSkeleton } from "@/components/jobs/job-card-skeleton";
@@ -30,6 +31,7 @@ import { JobsToolbar } from "@/components/jobs/jobs-toolbar";
 import { FetchRunsTimeline } from "@/components/jobs/fetch-runs-timeline";
 import { FetchChangeTabs } from "@/components/jobs/fetch-change-tabs";
 import { JobsStackTabs } from "@/components/jobs/jobs-stack-tabs";
+
 import { ApplyConfirmBanner } from "@/components/jobs/apply-confirm-banner";
 import {
   buildJobsListHref,
@@ -42,6 +44,7 @@ import {
 } from "@/components/jobs/types";
 import type { ApiJobsSortBy } from "@/types/api-jobs";
 import type { ApiFetchChangeType } from "@/types/api-fetch-runs";
+import { fetchRunEmptyMessage } from "@/types/api-fetch-runs";
 import type { ExperienceLevel, Job, JobType } from "@/types/job";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -81,6 +84,7 @@ function renderEmptyStateMessage(args: {
   postedFrom: string;
   postedTo: string;
   fetchChange: ApiFetchChangeType | null;
+  activeFetchRunAddedCount: number | null;
   hasClientFilters: boolean;
   total: number;
   pageJobs: number;
@@ -89,7 +93,10 @@ function renderEmptyStateMessage(args: {
   const sourceLabel = args.source.trim();
   const hasPostedRange = Boolean(args.postedFrom || args.postedTo);
   if (args.fetchChange && args.total === 0) {
-    return `No ${args.fetchChange} jobs in this fetch run. Try another change type or run.`;
+    if (args.activeFetchRunAddedCount === 0) {
+      return "No new jobs — all apply URLs already exist.";
+    }
+    return fetchRunEmptyMessage({ added_count: args.activeFetchRunAddedCount ?? 0 });
   }
   if (hasPostedRange && args.total === 0) {
     return `No jobs posted ${formatPostedDateRange(args.postedFrom, args.postedTo).toLowerCase()}. Try widening the date range.`;
@@ -261,7 +268,10 @@ export function JobsList() {
   const processJobsSnapshot = useRealtimeJobsStore((s) => s.processJobsSnapshot);
   const socketNewJobIds = useRealtimeJobsStore((s) => s.socketNewJobIds);
   const acknowledgedJobIds = useRealtimeJobsStore((s) => s.acknowledgedJobIds);
-  const newJobsCount = socketNewJobIds.size;
+  const ingestBannerVisible = useRealtimeJobsStore((s) => s.ingestBannerVisible);
+  const dismissIngestBanner = useRealtimeJobsStore((s) => s.dismissIngestBanner);
+  const { data: apiNewJobsTotal = 0 } = useNewJobsCountQuery();
+  const newJobsCount = Math.max(apiNewJobsTotal, socketNewJobIds.size);
 
   useEffect(() => {
     processJobsSnapshot(jobs.map((job) => ({ id: job.id, isNew: job.isNew })));
@@ -448,7 +458,7 @@ export function JobsList() {
 
   return (
     <section id="jobs" className="scroll-mt-24 md:scroll-mt-28" aria-labelledby="jobs-heading">
-      {newJobsCount > 0 ? (
+      {ingestBannerVisible && newJobsCount > 0 ? (
         <div
           className="mb-4 flex items-start gap-3 rounded-xl border-2 border-amber-400/55 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent px-4 py-3 shadow-md shadow-amber-500/10 dark:from-amber-500/20"
           role="status"
@@ -457,7 +467,7 @@ export function JobsList() {
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md">
             <Sparkles className="size-4" aria-hidden />
           </span>
-          <div className="min-w-0 pt-0.5">
+          <div className="min-w-0 flex-1 pt-0.5">
             <p className="text-sm font-semibold text-foreground">
               {newJobsCount === 1 ? "1 new job" : `${newJobsCount} new jobs`} just landed
             </p>
@@ -465,6 +475,13 @@ export function JobsList() {
               Highlighted listings are pinned to the top — open or apply to dismiss.
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => dismissIngestBanner()}
+            className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            Dismiss
+          </button>
         </div>
       ) : null}
 
@@ -507,14 +524,6 @@ export function JobsList() {
         />
       ) : null}
 
-      {activeFetchRun && fetchChange ? (
-        <FetchChangeTabs
-          run={activeFetchRun}
-          activeChange={fetchChange}
-          onChange={(next) => navigateList({ fetchChange: next, page: 1 })}
-        />
-      ) : null}
-
       <JobsPagination placement="top" {...sharedPaginationProps} />
 
       {/* Job cards / table */}
@@ -538,6 +547,7 @@ export function JobsList() {
             )}
             role="row"
           >
+
             <span className="sr-only">Logo</span>
             <span>Job</span>
             <span>Location</span>
@@ -546,6 +556,7 @@ export function JobsList() {
             <span>Source</span>
             <span className="text-right">Posted</span>
             <span className="text-right">Actions</span>
+
           </div>
         ) : null}
         <div className={viewMode === "list" ? "divide-y divide-border/60" : "contents"}>
