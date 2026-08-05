@@ -547,15 +547,15 @@ export function JobsList() {
             )}
             role="row"
           >
-            {JOB_LIST_HEADER_CELLS.map((cell) =>
-              cell.label == null ? (
-                <span key={cell.key} aria-hidden="true" />
-              ) : (
-                <span key={cell.key} className={cell.className}>
-                  {cell.label}
-                </span>
-              ),
-            )}
+            {JOB_LIST_HEADER_CELLS.map((cell) => (
+              <span
+                key={cell.key}
+                className={cell.className}
+                aria-hidden={cell.label ? undefined : true}
+              >
+                {cell.label}
+              </span>
+            ))}
           </div>
         ) : null}
         <div className={viewMode === "list" ? "divide-y divide-border/60" : "contents"}>
@@ -721,15 +721,15 @@ export function JobsListSkeleton() {
           )}
           role="row"
         >
-          {JOB_LIST_HEADER_CELLS.map((cell) =>
-            cell.label == null ? (
-              <span key={cell.key} aria-hidden="true" />
-            ) : (
-              <span key={cell.key} className={cell.className}>
-                {cell.label}
-              </span>
-            ),
-          )}
+          {JOB_LIST_HEADER_CELLS.map((cell) => (
+            <span
+              key={cell.key}
+              className={cell.className}
+              aria-hidden={cell.label ? undefined : true}
+            >
+              {cell.label}
+            </span>
+          ))}
         </div>
         <div className="divide-y divide-border/60">
           {Array.from({ length: FIRST_LOAD_SKELETON_COUNT }).map((_, i) => (
