@@ -24,7 +24,7 @@ import { useNewJobsCountQuery } from "@/hooks/use-new-jobs-count-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { JobCard } from "@/components/jobs/job-card";
 import { JobCardSkeleton } from "@/components/jobs/job-card-skeleton";
-import { JOB_LIST_ROW_GRID } from "@/components/jobs/job-list-row";
+import { JOB_LIST_HEADER_CELLS, JOB_LIST_ROW_GRID } from "@/components/jobs/job-list-row";
 import { JobDetailPanel } from "@/components/jobs/job-detail-panel";
 import { JobsPagination } from "@/components/jobs/jobs-pagination";
 import { JobsToolbar } from "@/components/jobs/jobs-toolbar";
@@ -547,16 +547,15 @@ export function JobsList() {
             )}
             role="row"
           >
-
-            <span className="sr-only">Logo</span>
-            <span>Job</span>
-            <span>Location</span>
-            <span>Type</span>
-            <span>Salary</span>
-            <span>Source</span>
-            <span className="text-right">Posted</span>
-            <span className="text-right">Actions</span>
-
+            {JOB_LIST_HEADER_CELLS.map((cell) => (
+              <span
+                key={cell.key}
+                className={cell.className}
+                aria-hidden={cell.label ? undefined : true}
+              >
+                {cell.label}
+              </span>
+            ))}
           </div>
         ) : null}
         <div className={viewMode === "list" ? "divide-y divide-border/60" : "contents"}>
@@ -720,15 +719,17 @@ export function JobsListSkeleton() {
             JOB_LIST_ROW_GRID,
             "border-b border-border/70 bg-muted/30 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground",
           )}
+          role="row"
         >
-          <span className="sr-only">Logo</span>
-          <span>Job</span>
-          <span>Location</span>
-          <span>Type</span>
-          <span>Salary</span>
-          <span>Source</span>
-          <span className="text-right">Posted</span>
-          <span className="text-right">Actions</span>
+          {JOB_LIST_HEADER_CELLS.map((cell) => (
+            <span
+              key={cell.key}
+              className={cell.className}
+              aria-hidden={cell.label ? undefined : true}
+            >
+              {cell.label}
+            </span>
+          ))}
         </div>
         <div className="divide-y divide-border/60">
           {Array.from({ length: FIRST_LOAD_SKELETON_COUNT }).map((_, i) => (
