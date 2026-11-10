@@ -2,22 +2,23 @@
  * Browser-side client for the user Secure Credentials vault.
  *
  * Endpoints (own rows only):
- *   GET    /api/v1/credentials              — list (page, page_size, q, credential_type)
+ *   GET    /api/v1/credentials              — list (+ vault_scope, employer_id)
+ *   GET    /api/v1/credentials/tree         — personal + employers tree
  *   POST   /api/v1/credentials              — create (requires secret)
  *   GET    /api/v1/credentials/{id}         — detail, includes the owner's secret
  *   PUT    /api/v1/credentials/{id}         — update (omit secret to keep)
  *   DELETE /api/v1/credentials/{id}         — delete (204)
- *
- * The list omits secrets. Opening a credential returns the secret so it can be shown or copied.
  */
 import { fetchAuthed } from "@/lib/auth-session";
 import { assertOkResponse } from "@/lib/http";
 import type {
+  CredentialTreeResponse,
   CredentialType,
   SecureCredential,
   SecureCredentialCreateRequest,
   SecureCredentialListResponse,
   SecureCredentialUpdateRequest,
+  VaultScope,
 } from "@/types/secure-credentials";
 
 const BASE = "/api/v1/credentials";
@@ -27,10 +28,14 @@ export type ListSecureCredentialsParams = {
   page_size: number;
   q?: string;
   credential_type?: CredentialType;
+  vault_scope?: VaultScope;
+  employer_id?: number;
 };
 
 const CREDENTIAL_TYPES: readonly CredentialType[] = [
   "pc_login",
+  "gmail",
+  "outlook",
   "company_email",
   "two_fa_key",
   "other",
@@ -52,9 +57,12 @@ function normalizeCredentialType(value: unknown): CredentialType {
   if (typeof value === "string" && CREDENTIAL_TYPES.includes(value as CredentialType)) {
     return value as CredentialType;
   }
-  // Legacy value before API Key was replaced by 2FA Key.
   if (value === "api_key") return "other";
   return "other";
+}
+
+function normalizeVaultScope(value: unknown): VaultScope {
+  return value === "job" ? "job" : "personal";
 }
 
 function normalizeNullableNumber(value: unknown): number | null {
@@ -70,18 +78,20 @@ function normalizeNullableString(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
 
-function normalizeCredential(
+export function normalizeCredential(
   raw: Partial<SecureCredential> & Record<string, unknown> & { id: number },
 ): SecureCredential {
   const username = typeof raw.username === "string" && raw.username.trim() ? raw.username : null;
   const notes = typeof raw.notes === "string" ? raw.notes : null;
-  // Secret only kept when the API explicitly returns it (for edit reveal). Never invent it.
   const secret = typeof raw.secret === "string" && raw.secret.length > 0 ? raw.secret : null;
 
   return {
     id: raw.id,
     owner_user_id: normalizeNullableNumber(raw.owner_user_id) ?? 0,
     owner_name: normalizeNullableString(raw.owner_name),
+    vault_scope: normalizeVaultScope(raw.vault_scope),
+    employer_id: normalizeNullableNumber(raw.employer_id),
+    employer_name: normalizeNullableString(raw.employer_name),
     service_name: typeof raw.service_name === "string" ? raw.service_name : "—",
     credential_type: normalizeCredentialType(raw.credential_type),
     username,
@@ -127,6 +137,58 @@ function normalizeListResponse(
   return { items, total, page, page_size: pageSize };
 }
 
+function normalizeTree(raw: Record<string, unknown>): CredentialTreeResponse {
+  const personalRaw =
+    typeof raw.personal === "object" && raw.personal !== null
+      ? (raw.personal as Record<string, unknown>)
+      : {};
+  const jobsRaw =
+    typeof raw.jobs === "object" && raw.jobs !== null
+      ? (raw.jobs as Record<string, unknown>)
+      : {};
+  const employersRaw = Array.isArray(jobsRaw.employers) ? jobsRaw.employers : [];
+
+  const personalItems = Array.isArray(personalRaw.items)
+    ? (personalRaw.items as unknown[]).filter(isRawCredential).map(normalizeCredential)
+    : [];
+
+  const employers = employersRaw
+    .filter((e): e is Record<string, unknown> & { id: number } => {
+      return typeof e === "object" && e !== null && typeof (e as { id?: unknown }).id === "number";
+    })
+    .map((emp) => {
+      const items = Array.isArray(emp.items)
+        ? (emp.items as unknown[]).filter(isRawCredential).map(normalizeCredential)
+        : [];
+      return {
+        id: emp.id,
+        name: typeof emp.name === "string" ? emp.name : "Employer",
+        website_url: normalizeNullableString(emp.website_url),
+        notes: normalizeNullableString(emp.notes),
+        sort_order: nonNegativeInt(emp.sort_order, 0),
+        count: nonNegativeInt(emp.count, items.length),
+        items,
+      };
+    });
+
+  return {
+    owner_user_id: normalizeNullableNumber(raw.owner_user_id) ?? 0,
+    owner_name: normalizeNullableString(raw.owner_name),
+    personal: {
+      count: nonNegativeInt(personalRaw.count, personalItems.length),
+      items: personalItems,
+    },
+    jobs: {
+      employer_count: nonNegativeInt(jobsRaw.employer_count, employers.length),
+      credential_count: nonNegativeInt(
+        jobsRaw.credential_count,
+        employers.reduce((sum, e) => sum + e.count, 0),
+      ),
+      employers,
+    },
+  };
+}
+
 export async function listSecureCredentials(
   params: ListSecureCredentialsParams,
 ): Promise<SecureCredentialListResponse> {
@@ -137,11 +199,22 @@ export async function listSecureCredentials(
   const search = params.q?.trim();
   if (search) q.set("q", search);
   if (params.credential_type) q.set("credential_type", params.credential_type);
+  if (params.vault_scope) q.set("vault_scope", params.vault_scope);
+  if (params.employer_id != null && params.employer_id > 0) {
+    q.set("employer_id", String(params.employer_id));
+  }
 
   const res = await fetchAuthed(`${BASE}?${q}`);
   await assertOkResponse(res, "Failed to load credentials.");
   const raw = (await res.json()) as RawListResponse;
   return normalizeListResponse(raw, params.page, params.page_size);
+}
+
+export async function getCredentialTree(): Promise<CredentialTreeResponse> {
+  const res = await fetchAuthed(`${BASE}/tree`);
+  await assertOkResponse(res, "Failed to load vault tree.");
+  const raw = (await res.json()) as Record<string, unknown>;
+  return normalizeTree(raw);
 }
 
 export async function getSecureCredential(credentialId: number): Promise<SecureCredential> {

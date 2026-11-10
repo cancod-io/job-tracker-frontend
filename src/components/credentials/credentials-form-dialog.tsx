@@ -12,21 +12,31 @@ import { Modal } from "@/components/ui/modal";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import type {
+  CredentialEmployer,
   CredentialType,
   SecureCredential,
   SecureCredentialCreateRequest,
   SecureCredentialUpdateRequest,
+  VaultScope,
 } from "@/types/secure-credentials";
 
 type Mode = "create" | "edit";
 
+export type CredentialFormDefaults = {
+  vaultScope?: VaultScope;
+  employerId?: number | null;
+};
+
 type CredentialsFormDialogProps = {
   mode: Mode;
   initial?: SecureCredential | null;
+  employerOptions: CredentialEmployer[];
+  defaults?: CredentialFormDefaults;
   onClose: () => void;
   onSubmit: (
     payload: SecureCredentialCreateRequest | SecureCredentialUpdateRequest,
   ) => Promise<void>;
+  onCreateEmployerInline?: (name: string) => Promise<CredentialEmployer>;
 };
 
 function SecretInput({
@@ -80,12 +90,24 @@ function SecretInput({
 export function CredentialsFormDialog({
   mode,
   initial,
+  employerOptions,
+  defaults,
   onClose,
   onSubmit,
+  onCreateEmployerInline,
 }: CredentialsFormDialogProps) {
   const [serviceName, setServiceName] = useState(initial?.service_name ?? "");
   const [credentialType, setCredentialType] = useState<CredentialType>(
     initial?.credential_type ?? "other",
+  );
+  const [vaultScope, setVaultScope] = useState<VaultScope>(
+    initial?.vault_scope ?? defaults?.vaultScope ?? "personal",
+  );
+  const [employerId, setEmployerId] = useState(
+    String(
+      initial?.employer_id ??
+        (defaults?.employerId && defaults.employerId > 0 ? defaults.employerId : ""),
+    ),
   );
   const [username, setUsername] = useState(initial?.username ?? "");
   const [secret, setSecret] = useState(initial?.secret ?? "");
@@ -94,12 +116,25 @@ export function CredentialsFormDialog({
   const [clearNotes, setClearNotes] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  /** Snapshot of loaded secret so unchanged values are omitted on update (keep existing). */
   const [loadedSecret, setLoadedSecret] = useState(initial?.secret ?? "");
+  const [localEmployers, setLocalEmployers] = useState(employerOptions);
+  const [newEmployerName, setNewEmployerName] = useState("");
+  const [creatingEmployer, setCreatingEmployer] = useState(false);
+
+  useEffect(() => {
+    setLocalEmployers(employerOptions);
+  }, [employerOptions]);
 
   useEffect(() => {
     setServiceName(initial?.service_name ?? "");
     setCredentialType(initial?.credential_type ?? "other");
+    setVaultScope(initial?.vault_scope ?? defaults?.vaultScope ?? "personal");
+    setEmployerId(
+      String(
+        initial?.employer_id ??
+          (defaults?.employerId && defaults.employerId > 0 ? defaults.employerId : ""),
+      ),
+    );
     setUsername(initial?.username ?? "");
     setSecret(initial?.secret ?? "");
     setLoadedSecret(initial?.secret ?? "");
@@ -107,7 +142,8 @@ export function CredentialsFormDialog({
     setClearUsername(false);
     setClearNotes(false);
     setSubmitError(null);
-  }, [initial, mode]);
+    setNewEmployerName("");
+  }, [initial, mode, defaults]);
 
   function clearSecretFields() {
     setUsername("");
@@ -124,6 +160,12 @@ export function CredentialsFormDialog({
     if (name.length > 200) return "Service name must be at most 200 characters.";
     if (username.length > 500) return "Username must be at most 500 characters.";
     if (notes.length > 4000) return "Notes must be at most 4000 characters.";
+    if (vaultScope === "job") {
+      const eid = Number(employerId);
+      if (!Number.isFinite(eid) || eid <= 0) {
+        return "Job credentials require an employer folder.";
+      }
+    }
     if (mode === "create") {
       const trimmedSecret = secret.trim();
       if (!trimmedSecret) return "Secret is required.";
@@ -132,6 +174,32 @@ export function CredentialsFormDialog({
       return "Secret must be at most 8000 characters.";
     }
     return null;
+  }
+
+  async function handleCreateEmployer() {
+    if (!onCreateEmployerInline) return;
+    const trimmed = newEmployerName.trim();
+    if (!trimmed) {
+      setSubmitError("Enter an employer name to create.");
+      return;
+    }
+    setCreatingEmployer(true);
+    setSubmitError(null);
+    try {
+      const created = await onCreateEmployerInline(trimmed);
+      setLocalEmployers((prev) =>
+        [...prev.filter((e) => e.id !== created.id), created].sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+        ),
+      );
+      setEmployerId(String(created.id));
+      setVaultScope("job");
+      setNewEmployerName("");
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Could not create employer.");
+    } finally {
+      setCreatingEmployer(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -149,8 +217,10 @@ export function CredentialsFormDialog({
         const payload: SecureCredentialCreateRequest = {
           service_name: serviceName.trim(),
           credential_type: credentialType,
+          vault_scope: vaultScope,
           secret: secret.trim(),
         };
+        if (vaultScope === "job") payload.employer_id = Number(employerId);
         const trimmedUsername = username.trim();
         if (trimmedUsername) payload.username = trimmedUsername;
         const trimmedNotes = notes.trim();
@@ -160,7 +230,14 @@ export function CredentialsFormDialog({
         const payload: SecureCredentialUpdateRequest = {
           service_name: serviceName.trim(),
           credential_type: credentialType,
+          vault_scope: vaultScope,
         };
+        if (vaultScope === "personal") {
+          payload.clear_employer = true;
+          payload.employer_id = null;
+        } else {
+          payload.employer_id = Number(employerId);
+        }
         if (clearUsername) {
           payload.clear_username = true;
         } else {
@@ -199,7 +276,7 @@ export function CredentialsFormDialog({
       title={isCreate ? "Add Credential" : "Edit Credential"}
       description={
         isCreate
-          ? "Store a password or key. After saving, show and copy it from the credential card."
+          ? "Choose Personal or Job scope, then store the login or key."
           : `Update ${initial?.service_name ?? "credential"}. Leave secret blank to keep the existing value.`
       }
       onClose={onClose}
@@ -212,17 +289,89 @@ export function CredentialsFormDialog({
         noValidate
       >
         <div className="space-y-1.5">
-          <label
-            htmlFor="credential-service-name"
-            className="text-xs font-semibold text-foreground"
-          >
+          <p className="text-xs font-semibold">Scope</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setVaultScope("personal");
+                setEmployerId("");
+              }}
+              className={cn(
+                "rounded-lg border px-3 py-2 text-sm font-semibold",
+                vaultScope === "personal"
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card hover:bg-muted",
+              )}
+            >
+              Personal
+            </button>
+            <button
+              type="button"
+              onClick={() => setVaultScope("job")}
+              className={cn(
+                "rounded-lg border px-3 py-2 text-sm font-semibold",
+                vaultScope === "job"
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card hover:bg-muted",
+              )}
+            >
+              Job
+            </button>
+          </div>
+        </div>
+
+        {vaultScope === "job" ? (
+          <div className="space-y-2">
+            <label htmlFor="credential-employer" className="text-xs font-semibold">
+              Employer <span className="text-rose-500">*</span>
+            </label>
+            <select
+              id="credential-employer"
+              value={employerId}
+              onChange={(e) => setEmployerId(e.target.value)}
+              className="form-control w-full"
+              required
+            >
+              <option value="">Select employer…</option>
+              {localEmployers.map((emp) => (
+                <option key={emp.id} value={String(emp.id)}>
+                  {emp.name}
+                </option>
+              ))}
+            </select>
+            {onCreateEmployerInline ? (
+              <div className="flex gap-2">
+                <input
+                  value={newEmployerName}
+                  onChange={(e) => setNewEmployerName(e.target.value)}
+                  placeholder="Or create employer…"
+                  className="form-control w-full"
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleCreateEmployer()}
+                  disabled={creatingEmployer}
+                  className="shrink-0 rounded-lg border border-border px-3 text-sm font-semibold hover:bg-muted disabled:opacity-60"
+                >
+                  {creatingEmployer ? "…" : "Add"}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="space-y-1.5">
+          <label htmlFor="credential-service-name" className="text-xs font-semibold">
             Service name <span className="text-rose-500">*</span>
           </label>
           <input
             id="credential-service-name"
             value={serviceName}
             onChange={(e) => setServiceName(e.target.value)}
-            placeholder="e.g. Shopify Admin Account"
+            placeholder={
+              vaultScope === "job" ? "e.g. Greenhouse portal" : "e.g. Gmail personal"
+            }
             maxLength={200}
             required
             className="form-control w-full"
@@ -230,7 +379,7 @@ export function CredentialsFormDialog({
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="credential-type" className="text-xs font-semibold text-foreground">
+          <label htmlFor="credential-type" className="text-xs font-semibold">
             Type
           </label>
           <select
@@ -248,7 +397,7 @@ export function CredentialsFormDialog({
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="credential-username" className="text-xs font-semibold text-foreground">
+          <label htmlFor="credential-username" className="text-xs font-semibold">
             {isTwoFaCredentialType(credentialType)
               ? "Account label"
               : isEmailCredentialType(credentialType)
@@ -300,7 +449,7 @@ export function CredentialsFormDialog({
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="credential-secret" className="text-xs font-semibold text-foreground">
+          <label htmlFor="credential-secret" className="text-xs font-semibold">
             {secretCopy.label} {isCreate ? <span className="text-rose-500">*</span> : null}
           </label>
           <SecretInput
@@ -326,7 +475,7 @@ export function CredentialsFormDialog({
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="credential-notes" className="text-xs font-semibold text-foreground">
+          <label htmlFor="credential-notes" className="text-xs font-semibold">
             Notes
           </label>
           <textarea
