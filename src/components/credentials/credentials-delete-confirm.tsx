@@ -46,7 +46,7 @@ export function CredentialsDeleteConfirm({
           <AlertTriangle className="mt-0.5 size-5 shrink-0 text-rose-500" aria-hidden />
           <p className="text-sm leading-relaxed text-foreground/90">
             Permanently remove{" "}
-            <strong className="font-semibold break-all text-foreground">
+            <strong className="break-all font-semibold text-foreground">
               {credential.service_name}
             </strong>
             ? The encrypted secret will be deleted.

@@ -4,11 +4,8 @@ import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
-import { JOBS_PATH, LOGIN_PATH, verifyEmailHref, resolveSafeNextPath } from "@/config/auth-routes";
-import {
-  MIN_PASSWORD_LENGTH,
-  PasswordFieldsGroup,
-} from "@/components/auth/password-fields-group";
+import { LOGIN_PATH, verifyEmailHref, resolveSafeNextPath } from "@/config/auth-routes";
+import { MIN_PASSWORD_LENGTH, PasswordFieldsGroup } from "@/components/auth/password-fields-group";
 import { notify } from "@/lib/notify";
 import { useAuth } from "@/providers/auth-provider";
 
@@ -32,8 +29,7 @@ function UserRegisterFormInner() {
     }
   }, [status, router, nextPath]);
 
-  const passwordsValid =
-    password.length >= MIN_PASSWORD_LENGTH && password === confirm;
+  const passwordsValid = password.length >= MIN_PASSWORD_LENGTH && password === confirm;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -69,8 +65,8 @@ function UserRegisterFormInner() {
         <div className="text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Almost there</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Your account ({pendingApprovalEmail}) is waiting for administrator approval. You will
-            be able to sign in after an admin approves your registration.
+            Your account ({pendingApprovalEmail}) is waiting for administrator approval. You will be
+            able to sign in after an admin approves your registration.
           </p>
         </div>
         <div className="rounded-2xl border border-amber-500/35 bg-amber-500/10 p-6 text-sm text-amber-950 dark:text-amber-100 md:p-8">
@@ -111,7 +107,7 @@ function UserRegisterFormInner() {
       <div className="text-center">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Create account</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Register to save jobs and track applications across devices.
+          Register to manage your profile and credentials.
         </p>
       </div>
 

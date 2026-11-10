@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
-import { JOBS_PATH, REGISTER_PATH, verifyEmailHref, resolveSafeNextPath } from "@/config/auth-routes";
+import { REGISTER_PATH, verifyEmailHref, resolveSafeNextPath } from "@/config/auth-routes";
 import { isLoginAuthError, LOGIN_ERROR_CODES, type LoginField } from "@/lib/auth-errors";
 import { notify } from "@/lib/notify";
 import { useAuth } from "@/providers/auth-provider";
@@ -120,7 +120,7 @@ function UserLoginFormInner() {
       <div className="text-center">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Sign in</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Access saved jobs and application tracking with your account.
+          Sign in to manage your profile, CVs, and secure credentials.
         </p>
       </div>
 

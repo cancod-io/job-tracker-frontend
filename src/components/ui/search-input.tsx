@@ -41,7 +41,7 @@ export function SearchInput({
           "form-control h-10 w-full pl-9 text-sm",
           value && "pr-9",
           /* Hide native clear control — we render a custom clear button */
-          "[&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden [&::-ms-clear]:hidden",
+          "[&::-ms-clear]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden",
         )}
         aria-label={ariaLabel}
       />
@@ -49,7 +49,7 @@ export function SearchInput({
         <button
           type="button"
           onClick={() => onChange("")}
-          className="absolute right-3 top-1/2 -translate-y-1/2 flex size-5 items-center justify-center rounded-full bg-muted-foreground/20 text-muted-foreground transition-colors hover:bg-muted-foreground/30 hover:text-foreground"
+          className="absolute right-3 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full bg-muted-foreground/20 text-muted-foreground transition-colors hover:bg-muted-foreground/30 hover:text-foreground"
           aria-label="Clear search"
         >
           <X className="size-3" aria-hidden />

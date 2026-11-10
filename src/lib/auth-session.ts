@@ -11,20 +11,16 @@ import {
   signalSessionExpired,
   signalTokenRefreshed,
 } from "@/lib/auth-token";
+import { apiUrl } from "@/lib/api";
 import { fetchWithTimeout } from "@/lib/http";
 import type { TokenResponse } from "@/types/auth";
 
-const REFRESH_URL = "/api/v1/auth/refresh";
+const REFRESH_PATH = "/api/v1/auth/refresh";
 
 let refreshInFlight: Promise<string | null> | null = null;
 
 export function applyTokenResponse(data: TokenResponse): void {
-  setStoredTokens(
-    data.access_token,
-    data.refresh_token,
-    data.expires_in,
-    data.refresh_expires_in,
-  );
+  setStoredTokens(data.access_token, data.refresh_token, data.expires_in, data.refresh_expires_in);
   signalTokenRefreshed(data.access_token);
 }
 
@@ -47,7 +43,7 @@ async function requestRefresh(): Promise<TokenResponse | null> {
   const refreshToken = getStoredRefreshToken();
   if (!refreshToken || isRefreshTokenExpired()) return null;
 
-  const res = await fetchWithTimeout(REFRESH_URL, {
+  const res = await fetchWithTimeout(apiUrl(REFRESH_PATH), {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({ refresh_token: refreshToken }),
@@ -102,13 +98,14 @@ export async function fetchAuthed(
   let token = await ensureAccessToken();
   if (!token) forceLogout();
 
-  let res = await fetchWithTimeout(input, withBearer(token, init), timeoutMs);
+  const url = input.startsWith("/api/v1") ? apiUrl(input) : input;
+  let res = await fetchWithTimeout(url, withBearer(token, init), timeoutMs);
 
   if (res.status === 401) {
     const newToken = await refreshAccessToken();
     if (newToken) {
       token = newToken;
-      res = await fetchWithTimeout(input, withBearer(token, init), timeoutMs);
+      res = await fetchWithTimeout(url, withBearer(token, init), timeoutMs);
     }
   }
 

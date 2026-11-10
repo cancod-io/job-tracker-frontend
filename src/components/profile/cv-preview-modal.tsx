@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { notify } from "@/lib/notify";
 import { downloadCv, fetchCvBlob } from "@/lib/profile-api";
 import { cvPreviewKind } from "@/lib/profile-file-utils";
-import { formatFileSize } from "@/lib/application-file-utils";
+import { formatFileSize } from "@/lib/profile-file-utils";
 import { FilePreviewModal } from "@/components/files/file-preview-modal";
 import type { UserCv } from "@/types/profile";
 

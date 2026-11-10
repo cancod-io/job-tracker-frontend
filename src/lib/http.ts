@@ -42,7 +42,8 @@ function messageFromErrorBody(
     const messages = data.detail
       .map((item) => {
         if (typeof item === "string") return item;
-        if (item && typeof item === "object") return formatValidationItem(item as FastApiValidationItem);
+        if (item && typeof item === "object")
+          return formatValidationItem(item as FastApiValidationItem);
         return null;
       })
       .filter((m): m is string => Boolean(m));

@@ -10,7 +10,7 @@ import { useAvatarDisplayUrl } from "@/hooks/use-avatar-display-url";
 import { useDeleteAvatarMutation, useUploadAvatarMutation } from "@/hooks/use-profile";
 import { hasProfileAvatar } from "@/lib/profile-avatar-url";
 import { AVATAR_ACCEPT, AVATAR_MAX_BYTES, validateAvatarFile } from "@/lib/profile-file-utils";
-import { formatFileSize } from "@/lib/application-file-utils";
+import { formatFileSize } from "@/lib/profile-file-utils";
 
 type AvatarUploaderProps = {
   /** Current avatar URL from the server (`profile.profile_picture_url`). */

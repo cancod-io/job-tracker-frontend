@@ -3,7 +3,7 @@ import { UserRegisterForm } from "@/components/auth/user-register-form";
 
 export const metadata: Metadata = {
   title: "Register",
-  description: "Create a Shopify Job Tracker account.",
+  description: "Create a TrackCod account.",
 };
 
 export default function UserRegisterPage() {

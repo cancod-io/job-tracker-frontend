@@ -28,7 +28,7 @@ function ToastCard({ item, onDismiss }: { item: NotificationItem; onDismiss: () 
       role={item.variant === "error" ? "alert" : "status"}
       aria-live={item.variant === "error" ? "assertive" : "polite"}
       className={cn(
-        "toast-shell pointer-events-auto w-[min(100vw-2rem,23rem)] motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2 motion-safe:duration-300 motion-reduce:animate-none",
+        "toast-shell pointer-events-auto w-[min(100vw-2rem,23rem)] motion-safe:duration-300 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2 motion-reduce:animate-none",
       )}
     >
       <div className="toast-icon">

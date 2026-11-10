@@ -4,6 +4,7 @@ import {
   resolveVerificationError,
   type ApiAuthErrorShape,
 } from "@/lib/auth-errors";
+import { apiUrl } from "@/lib/api";
 import { fetchWithTimeout } from "@/lib/http";
 import type { ResendVerificationPayload, VerifyEmailPayload } from "@/types/auth";
 
@@ -26,7 +27,7 @@ async function parseVerificationFailure(res: Response, fallback: string): Promis
 export async function verifyEmailRequest(payload: VerifyEmailPayload): Promise<string> {
   let res: Response;
   try {
-    res = await fetchWithTimeout("/api/v1/auth/verify-email", {
+    res = await fetchWithTimeout(apiUrl("/api/v1/auth/verify-email"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -53,7 +54,7 @@ export async function resendVerificationRequest(
 ): Promise<string> {
   let res: Response;
   try {
-    res = await fetchWithTimeout("/api/v1/auth/resend-verification", {
+    res = await fetchWithTimeout(apiUrl("/api/v1/auth/resend-verification"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: payload.email.trim() }),

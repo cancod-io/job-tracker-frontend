@@ -5,10 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { LOGIN_PATH } from "@/config/auth-routes";
-import {
-  isVerificationAuthError,
-  VERIFICATION_ERROR_CODES,
-} from "@/lib/auth-errors";
+import { isVerificationAuthError, VERIFICATION_ERROR_CODES } from "@/lib/auth-errors";
 import {
   RESEND_COOLDOWN_SECONDS,
   resendVerificationRequest,
@@ -195,7 +192,10 @@ function UserVerifyEmailFormInner() {
               setCode(next);
               setCodeInvalid(false);
             }}
-            className={cn("form-control w-full text-center text-lg tracking-[0.35em]", codeInvalid && "border-destructive")}
+            className={cn(
+              "form-control w-full text-center text-lg tracking-[0.35em]",
+              codeInvalid && "border-destructive",
+            )}
             disabled={submitting}
             aria-invalid={codeInvalid ? true : undefined}
             placeholder={"0".repeat(VERIFICATION_CODE_LENGTH)}

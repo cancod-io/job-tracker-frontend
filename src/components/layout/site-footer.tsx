@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { JOBS_PATH } from "@/config/auth-routes";
+import { HOME_PATH } from "@/config/auth-routes";
 import { userPrimaryNav } from "@/config/user-nav";
 
 type FooterLink = { href: string; label: string };
@@ -19,7 +19,7 @@ export function SiteFooter() {
         <div className="grid gap-10 md:grid-cols-[1.6fr_1fr_1fr]">
           {/* Brand */}
           <div className="max-w-sm">
-            <Link href={JOBS_PATH} className="inline-flex items-center" aria-label="TrackCod home">
+            <Link href={HOME_PATH} className="inline-flex items-center" aria-label="TrackCod home">
               <img
                 src="/light-logo.png"
                 alt="TrackCod"
@@ -36,8 +36,7 @@ export function SiteFooter() {
               />
             </Link>
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              The home for Shopify careers — aggregate, curate, and track jobs across the entire
-              Shopify ecosystem, all in one place.
+              Your account, profile, and secure credentials in one place.
             </p>
           </div>
 

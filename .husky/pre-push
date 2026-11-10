@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
+# Optional local hook — Vercel does not run husky (prepare removed).
 set -e
-(cd frontend-user && npm run check)
-(cd frontend-admin && npm run check)
+npm run check

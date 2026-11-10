@@ -24,14 +24,9 @@ function FieldError({ id, message }: { id: string; message: string }) {
   );
 }
 
-export function getPasswordLengthError(
-  password: string,
-  showWhenEmpty: boolean,
-): string | null {
+export function getPasswordLengthError(password: string, showWhenEmpty: boolean): string | null {
   if (password.length === 0) {
-    return showWhenEmpty
-      ? `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
-      : null;
+    return showWhenEmpty ? `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` : null;
   }
   if (password.length < MIN_PASSWORD_LENGTH) {
     return `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;

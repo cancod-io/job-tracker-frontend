@@ -1,6 +1,9 @@
-import { formatFileSize } from "@/lib/application-file-utils";
-
-export { formatFileSize };
+export function formatFileSize(bytes: number | null | undefined): string {
+  if (bytes == null || !Number.isFinite(bytes) || bytes < 0) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export const AVATAR_ACCEPT = "image/jpeg,image/png,image/gif,image/webp";
 export const AVATAR_MAX_BYTES = 5 * 1024 * 1024;

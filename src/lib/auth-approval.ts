@@ -4,8 +4,7 @@ import type { AuthUser } from "@/types/auth";
 export function assertUserApproved(user: AuthUser): void {
   if (user.approval_status === "pending") {
     throw createLoginAuthError({
-      message:
-        "Your account is waiting for administrator approval before you can sign in.",
+      message: "Your account is waiting for administrator approval before you can sign in.",
       code: LOGIN_ERROR_CODES.PENDING_APPROVAL,
       fields: [],
     });

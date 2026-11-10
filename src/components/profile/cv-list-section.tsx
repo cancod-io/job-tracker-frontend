@@ -8,7 +8,7 @@ import { formatDate } from "@/lib/date-utils";
 import { downloadCv } from "@/lib/profile-api";
 import { useCvsQuery, useDeleteCvMutation, useUploadCvMutation } from "@/hooks/use-profile";
 import { canPreviewCv, CV_ACCEPT, CV_MAX_BYTES, validateCvFile } from "@/lib/profile-file-utils";
-import { formatFileSize } from "@/lib/application-file-utils";
+import { formatFileSize } from "@/lib/profile-file-utils";
 import { Spinner } from "@/components/ui/spinner";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { ProfileSectionCard } from "@/components/profile/profile-section-card";
