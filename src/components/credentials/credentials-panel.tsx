@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Briefcase,
-  Building2,
-  ChevronLeft,
   KeyRound,
   Mail,
   Monitor,
@@ -21,10 +19,9 @@ import {
 import { CredentialsTable } from "@/components/credentials/credentials-table";
 import { EmployerDeleteConfirm } from "@/components/credentials/employer-delete-confirm";
 import { EmployerFormDialog } from "@/components/credentials/employer-form-dialog";
-import {
-  CREDENTIAL_TYPE_FILTER_OPTIONS,
-  formatCredentialType,
-} from "@/components/credentials/constants";
+import { JobsEmployerDetail } from "@/components/credentials/jobs-employer-detail";
+import { JobsEmployersView } from "@/components/credentials/jobs-employers-view";
+import { CREDENTIAL_TYPE_FILTER_OPTIONS } from "@/components/credentials/constants";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { SearchInput } from "@/components/ui/search-input";
 import { Spinner } from "@/components/ui/spinner";
@@ -258,6 +255,22 @@ export function CredentialsPanel() {
   };
 
   const showingJobsList = tab === "jobs" && selectedEmployerId == null && !search;
+  const showingJobsDetail = tab === "jobs" && selectedEmployerId != null;
+  const showingJobsSearch = tab === "jobs" && selectedEmployerId == null && searchActive;
+  const showTopTypeFilters = tab === "personal" || showingJobsSearch;
+  const showTopPrimaryAction = tab === "personal" || showingJobsSearch;
+
+  const openEmployer = (employerId: number) => {
+    setSelectedEmployerId(employerId);
+    setTypeFilter("all");
+    setSearchDraft("");
+    setSearch("");
+  };
+
+  const backToEmployers = () => {
+    setSelectedEmployerId(null);
+    setTypeFilter("all");
+  };
 
   return (
     <div className="space-y-4">
@@ -276,6 +289,7 @@ export function CredentialsPanel() {
                 onClick={() => {
                   setTab("personal");
                   setSelectedEmployerId(null);
+                  setTypeFilter("all");
                 }}
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors",
@@ -294,7 +308,10 @@ export function CredentialsPanel() {
                 type="button"
                 role="tab"
                 aria-selected={tab === "jobs"}
-                onClick={() => setTab("jobs")}
+                onClick={() => {
+                  setTab("jobs");
+                  setTypeFilter("all");
+                }}
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors",
                   tab === "jobs"
@@ -314,7 +331,13 @@ export function CredentialsPanel() {
               <SearchInput
                 value={searchDraft}
                 onChange={setSearchDraft}
-                placeholder="Search credentials…"
+                placeholder={
+                  showingJobsDetail
+                    ? `Search in ${selectedEmployer?.name ?? "folder"}…`
+                    : tab === "jobs"
+                      ? "Search job logins across employers…"
+                      : "Search credentials…"
+                }
                 aria-label="Search credentials"
                 className="min-w-0 flex-1"
               />
@@ -333,7 +356,7 @@ export function CredentialsPanel() {
               ) : null}
             </div>
 
-            {!showingJobsList ? (
+            {showTopTypeFilters ? (
               <div
                 className="flex flex-wrap gap-1.5"
                 role="group"
@@ -376,16 +399,7 @@ export function CredentialsPanel() {
               <RefreshCw className={cn("size-4", loading && "animate-spin")} aria-hidden />
               Refresh
             </button>
-            {tab === "jobs" && selectedEmployerId == null ? (
-              <button
-                type="button"
-                onClick={() => setShowEmployerCreate(true)}
-                className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-card px-3.5 text-sm font-semibold hover:bg-muted"
-              >
-                <Plus className="size-4" aria-hidden />
-                Add employer
-              </button>
-            ) : (
+            {showTopPrimaryAction ? (
               <button
                 type="button"
                 onClick={() => openCreate()}
@@ -394,156 +408,98 @@ export function CredentialsPanel() {
                 <Plus className="size-4" aria-hidden />
                 Add Credential
               </button>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
 
       {error ? <ErrorAlert message={error} onRetry={() => void load()} /> : null}
 
-      {tab === "personal" && !search ? (
-        <p className="text-xs text-muted-foreground">Personal › life accounts</p>
-      ) : null}
-      {tab === "jobs" && selectedEmployerId == null && !search ? (
-        <p className="text-xs text-muted-foreground">
-          Jobs › {tree?.jobs.employer_count ?? 0} employer
-          {(tree?.jobs.employer_count ?? 0) === 1 ? "" : "s"}
-        </p>
-      ) : null}
-      {tab === "jobs" && selectedEmployerId != null ? (
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <button
-            type="button"
-            onClick={() => setSelectedEmployerId(null)}
-            className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
-          >
-            <ChevronLeft className="size-4" aria-hidden />
-            Jobs
-          </button>
-          <span className="text-muted-foreground">›</span>
-          <span className="font-semibold text-foreground">
-            {selectedEmployer && "name" in selectedEmployer ? selectedEmployer.name : "Employer"}
-          </span>
-        </div>
-      ) : null}
-
       {showingJobsList ? (
-        <div className="rounded-2xl border border-border/80 bg-card shadow-sm">
-          {(tree?.jobs.employers.length ?? 0) === 0 && !loading ? (
-            <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-              <Building2 className="mb-3 size-10 text-muted-foreground" aria-hidden />
-              <p className="text-base font-semibold">No employers yet</p>
-              <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                Add an employer folder, then store portal logins under it.
-              </p>
-              <button
-                type="button"
-                onClick={() => setShowEmployerCreate(true)}
-                className="mt-4 inline-flex h-10 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground"
-              >
-                <Plus className="size-4" aria-hidden />
-                Add employer
-              </button>
-            </div>
-          ) : (
-            <ul className="divide-y divide-border/60">
-              {(tree?.jobs.employers ?? []).map((emp) => (
-                <li key={emp.id}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedEmployerId(emp.id)}
-                    className="flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-muted/40"
-                  >
-                    <span className="inline-flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <Building2 className="size-5" aria-hidden />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-semibold">{emp.name}</span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {emp.count} credential{emp.count === 1 ? "" : "s"}
-                        {emp.website_url ? ` · ${emp.website_url}` : ""}
-                      </span>
-                    </span>
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
-                      {emp.count}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <JobsEmployersView
+          employers={tree?.jobs.employers ?? []}
+          loading={loading}
+          onOpen={openEmployer}
+          onAddEmployer={() => setShowEmployerCreate(true)}
+        />
+      ) : showingJobsDetail && selectedEmployer ? (
+        <JobsEmployerDetail
+          employer={{
+            id: selectedEmployer.id,
+            name: selectedEmployer.name,
+            website_url: selectedEmployer.website_url,
+            notes: selectedEmployer.notes,
+            count:
+              "count" in selectedEmployer
+                ? selectedEmployer.count
+                : selectedEmployer.credential_count,
+          }}
+          items={items}
+          loading={loading}
+          hasLoaded={tree != null}
+          typeFilter={typeFilter}
+          searchActive={searchActive}
+          filtersActive={filtersActive}
+          onBack={backToEmployers}
+          onTypeFilter={setTypeFilter}
+          onAddCredential={() => openCreate("job")}
+          onEditEmployer={() => {
+            const emp = employers.find((e) => e.id === selectedEmployerId);
+            if (emp) setEditingEmployer(emp);
+          }}
+          onDeleteEmployer={() => {
+            const emp =
+              employers.find((e) => e.id === selectedEmployerId) ??
+              tree?.jobs.employers.find((e) => e.id === selectedEmployerId);
+            if (!emp) return;
+            setDeletingEmployer({
+              id: emp.id,
+              name: emp.name,
+              credentialCount:
+                "credential_count" in emp ? emp.credential_count : "count" in emp ? emp.count : 0,
+            });
+          }}
+          onEditCredential={(row) => void openEdit(row)}
+          onDeleteCredential={setDeleting}
+        />
+      ) : showingJobsSearch ? (
+        <CredentialsTable
+          items={items}
+          loading={loading}
+          hasLoaded={tree != null || searchItems.length > 0}
+          filtersActive={filtersActive}
+          searchActive={searchActive}
+          showPath
+          emptyTitle="No job logins match"
+          emptyDescription="Try another search, or open an employer folder to browse its logins."
+          onEdit={(row) => void openEdit(row)}
+          onDelete={setDeleting}
+          onAdd={() => {
+            setSearchDraft("");
+            setSearch("");
+            setShowEmployerCreate(true);
+          }}
+          addLabel="Add employer"
+        />
       ) : (
-        <>
-          {tab === "jobs" && selectedEmployerId != null ? (
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs text-muted-foreground">
-                {items.length} credential{items.length === 1 ? "" : "s"}
-                {typeFilter !== "all" ? ` · ${formatCredentialType(typeFilter)}` : ""}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const emp = employers.find((e) => e.id === selectedEmployerId);
-                    if (emp) setEditingEmployer(emp);
-                  }}
-                  className="text-xs font-semibold text-muted-foreground hover:underline"
-                >
-                  Edit employer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const emp =
-                      employers.find((e) => e.id === selectedEmployerId) ??
-                      tree?.jobs.employers.find((e) => e.id === selectedEmployerId);
-                    if (!emp) return;
-                    setDeletingEmployer({
-                      id: emp.id,
-                      name: emp.name,
-                      credentialCount:
-                        "credential_count" in emp
-                          ? emp.credential_count
-                          : "count" in emp
-                            ? emp.count
-                            : 0,
-                    });
-                  }}
-                  className="text-xs font-semibold text-rose-600 hover:underline"
-                >
-                  Delete employer
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          <CredentialsTable
-            items={items}
-            loading={loading}
-            hasLoaded={tree != null || searchItems.length > 0}
-            filtersActive={filtersActive}
-            searchActive={searchActive}
-            showPath={searchActive}
-            emptyTitle={
-              searchActive || filtersActive
-                ? "Nothing matches"
-                : tab === "personal"
-                  ? "No personal credentials yet"
-                  : "No credentials in this folder"
-            }
-            emptyDescription={
-              searchActive || filtersActive
-                ? "Try another search or clear filters."
-                : tab === "personal"
-                  ? "Store Gmail, Outlook, PC login, or personal 2FA here. Job portals go under Jobs → an employer folder."
-                  : "Add careers-portal, work email, or 2FA logins for this employer."
-            }
-            onEdit={(row) => void openEdit(row)}
-            onDelete={setDeleting}
-            onAdd={() => openCreate()}
-          />
-        </>
+        <CredentialsTable
+          items={items}
+          loading={loading}
+          hasLoaded={tree != null || searchItems.length > 0}
+          filtersActive={filtersActive}
+          searchActive={searchActive}
+          emptyTitle={
+            searchActive || filtersActive ? "Nothing matches" : "No personal credentials yet"
+          }
+          emptyDescription={
+            searchActive || filtersActive
+              ? "Try another search or clear filters."
+              : "Store Gmail, Outlook, PC login, or personal 2FA here. Job portals go under Jobs → an employer folder."
+          }
+          onEdit={(row) => void openEdit(row)}
+          onDelete={setDeleting}
+          onAdd={() => openCreate("personal")}
+        />
       )}
 
       {editLoading ? (

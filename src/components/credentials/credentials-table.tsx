@@ -22,8 +22,11 @@ type CredentialsTableProps = {
   filtersActive: boolean;
   searchActive: boolean;
   showPath?: boolean;
+  /** Nest inside another card — no outer border/radius. */
+  embedded?: boolean;
   emptyTitle?: string;
   emptyDescription?: string;
+  addLabel?: string;
   onEdit: (row: SecureCredential) => void;
   onDelete: (row: SecureCredential) => void;
   onAdd: () => void;
@@ -262,15 +265,21 @@ export function CredentialsTable({
   filtersActive,
   searchActive,
   showPath = false,
+  embedded = false,
   emptyTitle,
   emptyDescription,
+  addLabel = "Add credential",
   onEdit,
   onDelete,
   onAdd,
 }: CredentialsTableProps) {
+  const shellClass = embedded
+    ? "overflow-hidden bg-card"
+    : "overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm";
+
   if (!hasLoaded && loading) {
     return (
-      <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
+      <div className={shellClass}>
         <div className="h-12 animate-pulse border-b border-border/60 bg-muted/40" />
         <div className="space-y-0">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -286,7 +295,12 @@ export function CredentialsTable({
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 bg-card/40 px-6 py-16 text-center">
+      <div
+        className={cn(
+          "flex flex-col items-center justify-center px-6 py-16 text-center",
+          embedded ? "bg-card/40" : "rounded-2xl border border-dashed border-border/80 bg-card/40",
+        )}
+      >
         <div className="mb-4 inline-flex size-14 items-center justify-center rounded-2xl border border-border/80 bg-muted/40 text-muted-foreground">
           <KeyRound className="size-7" aria-hidden />
         </div>
@@ -305,7 +319,7 @@ export function CredentialsTable({
             className="mt-5 inline-flex h-10 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
           >
             <Plus className="size-4" aria-hidden />
-            Add credential
+            {addLabel}
           </button>
         ) : null}
       </div>
@@ -313,7 +327,7 @@ export function CredentialsTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
+    <div className={shellClass}>
       <ul className="divide-y divide-border/60 md:hidden">
         {items.map((row) => (
           <MobileCredentialRow key={row.id} row={row} onEdit={onEdit} onDelete={onDelete} />
