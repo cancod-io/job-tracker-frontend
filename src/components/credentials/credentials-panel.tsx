@@ -19,6 +19,7 @@ import {
   type CredentialFormDefaults,
 } from "@/components/credentials/credentials-form-dialog";
 import { CredentialsTable } from "@/components/credentials/credentials-table";
+import { EmployerDeleteConfirm } from "@/components/credentials/employer-delete-confirm";
 import { EmployerFormDialog } from "@/components/credentials/employer-form-dialog";
 import {
   CREDENTIAL_TYPE_FILTER_OPTIONS,
@@ -86,6 +87,11 @@ export function CredentialsPanel() {
   const [deleting, setDeleting] = useState<SecureCredential | null>(null);
   const [showEmployerCreate, setShowEmployerCreate] = useState(false);
   const [editingEmployer, setEditingEmployer] = useState<CredentialEmployer | null>(null);
+  const [deletingEmployer, setDeletingEmployer] = useState<{
+    id: number;
+    name: string;
+    credentialCount: number;
+  } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -163,16 +169,12 @@ export function CredentialsPanel() {
     if (!tree) return [];
     if (tab === "personal") {
       const rows = tree.personal.items;
-      return typeFilter === "all"
-        ? rows
-        : rows.filter((r) => r.credential_type === typeFilter);
+      return typeFilter === "all" ? rows : rows.filter((r) => r.credential_type === typeFilter);
     }
     if (selectedEmployerId != null) {
       const emp = tree.jobs.employers.find((e) => e.id === selectedEmployerId);
       const rows = emp?.items ?? [];
-      return typeFilter === "all"
-        ? rows
-        : rows.filter((r) => r.credential_type === typeFilter);
+      return typeFilter === "all" ? rows : rows.filter((r) => r.credential_type === typeFilter);
     }
     return [];
   }, [search, searchItems, tree, tab, selectedEmployerId, typeFilter]);
@@ -226,9 +228,7 @@ export function CredentialsPanel() {
   const handleCreateEmployer = async (
     payload: CredentialEmployerCreateRequest | CredentialEmployerUpdateRequest,
   ) => {
-    const created = await createCredentialEmployer(
-      payload as CredentialEmployerCreateRequest,
-    );
+    const created = await createCredentialEmployer(payload as CredentialEmployerCreateRequest);
     notify.success("Employer folder created");
     await load();
     setSelectedEmployerId(created.id);
@@ -238,23 +238,17 @@ export function CredentialsPanel() {
     payload: CredentialEmployerCreateRequest | CredentialEmployerUpdateRequest,
   ) => {
     if (!editingEmployer) return;
-    await updateCredentialEmployer(
-      editingEmployer.id,
-      payload as CredentialEmployerUpdateRequest,
-    );
+    await updateCredentialEmployer(editingEmployer.id, payload as CredentialEmployerUpdateRequest);
     notify.success("Employer updated");
     await load();
   };
 
-  const handleDeleteEmployer = async (employerId: number) => {
-    try {
-      await deleteCredentialEmployer(employerId);
-      notify.success("Employer deleted");
-      setSelectedEmployerId(null);
-      await load();
-    } catch (e) {
-      notify.error(e instanceof Error ? e.message : "Could not delete employer.");
-    }
+  const handleDeleteEmployer = async () => {
+    if (!deletingEmployer) return;
+    await deleteCredentialEmployer(deletingEmployer.id);
+    notify.success("Employer deleted");
+    setSelectedEmployerId(null);
+    await load();
   };
 
   const handleInlineEmployer = async (name: string) => {
@@ -311,7 +305,7 @@ export function CredentialsPanel() {
                 <Briefcase className="size-4" aria-hidden />
                 Jobs
                 <span className="rounded-full bg-white/15 px-1.5 text-[10px] tabular-nums">
-                  {tree?.jobs.employer_count ?? 0}
+                  {tree?.jobs.credential_count ?? 0}
                 </span>
               </button>
             </div>
@@ -407,6 +401,15 @@ export function CredentialsPanel() {
 
       {error ? <ErrorAlert message={error} onRetry={() => void load()} /> : null}
 
+      {tab === "personal" && !search ? (
+        <p className="text-xs text-muted-foreground">Personal › life accounts</p>
+      ) : null}
+      {tab === "jobs" && selectedEmployerId == null && !search ? (
+        <p className="text-xs text-muted-foreground">
+          Jobs › {tree?.jobs.employer_count ?? 0} employer
+          {(tree?.jobs.employer_count ?? 0) === 1 ? "" : "s"}
+        </p>
+      ) : null}
       {tab === "jobs" && selectedEmployerId != null ? (
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <button
@@ -419,9 +422,7 @@ export function CredentialsPanel() {
           </button>
           <span className="text-muted-foreground">›</span>
           <span className="font-semibold text-foreground">
-            {selectedEmployer && "name" in selectedEmployer
-              ? selectedEmployer.name
-              : "Employer"}
+            {selectedEmployer && "name" in selectedEmployer ? selectedEmployer.name : "Employer"}
           </span>
         </div>
       ) : null}
@@ -493,7 +494,22 @@ export function CredentialsPanel() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => void handleDeleteEmployer(selectedEmployerId)}
+                  onClick={() => {
+                    const emp =
+                      employers.find((e) => e.id === selectedEmployerId) ??
+                      tree?.jobs.employers.find((e) => e.id === selectedEmployerId);
+                    if (!emp) return;
+                    setDeletingEmployer({
+                      id: emp.id,
+                      name: emp.name,
+                      credentialCount:
+                        "credential_count" in emp
+                          ? emp.credential_count
+                          : "count" in emp
+                            ? emp.count
+                            : 0,
+                    });
+                  }}
                   className="text-xs font-semibold text-rose-600 hover:underline"
                 >
                   Delete employer
@@ -508,6 +524,21 @@ export function CredentialsPanel() {
             hasLoaded={tree != null || searchItems.length > 0}
             filtersActive={filtersActive}
             searchActive={searchActive}
+            showPath={searchActive}
+            emptyTitle={
+              searchActive || filtersActive
+                ? "Nothing matches"
+                : tab === "personal"
+                  ? "No personal credentials yet"
+                  : "No credentials in this folder"
+            }
+            emptyDescription={
+              searchActive || filtersActive
+                ? "Try another search or clear filters."
+                : tab === "personal"
+                  ? "Store Gmail, Outlook, PC login, or personal 2FA here. Job portals go under Jobs → an employer folder."
+                  : "Add careers-portal, work email, or 2FA logins for this employer."
+            }
             onEdit={(row) => void openEdit(row)}
             onDelete={setDeleting}
             onAdd={() => openCreate()}
@@ -568,6 +599,15 @@ export function CredentialsPanel() {
           credential={deleting}
           onClose={() => setDeleting(null)}
           onConfirm={() => handleDelete(deleting)}
+        />
+      ) : null}
+
+      {deletingEmployer ? (
+        <EmployerDeleteConfirm
+          employerName={deletingEmployer.name}
+          credentialCount={deletingEmployer.credentialCount}
+          onClose={() => setDeletingEmployer(null)}
+          onConfirm={handleDeleteEmployer}
         />
       ) : null}
     </div>

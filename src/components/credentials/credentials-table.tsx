@@ -21,10 +21,20 @@ type CredentialsTableProps = {
   hasLoaded: boolean;
   filtersActive: boolean;
   searchActive: boolean;
+  showPath?: boolean;
+  emptyTitle?: string;
+  emptyDescription?: string;
   onEdit: (row: SecureCredential) => void;
   onDelete: (row: SecureCredential) => void;
   onAdd: () => void;
 };
+
+function vaultPath(row: SecureCredential): string {
+  if (row.vault_scope === "job") {
+    return `Jobs › ${row.employer_name?.trim() || "Employer"} › ${row.service_name}`;
+  }
+  return `Personal › ${row.service_name}`;
+}
 
 function TypeBadge({ type }: { type: SecureCredential["credential_type"] }) {
   return (
@@ -251,6 +261,9 @@ export function CredentialsTable({
   hasLoaded,
   filtersActive,
   searchActive,
+  showPath = false,
+  emptyTitle,
+  emptyDescription,
   onEdit,
   onDelete,
   onAdd,
@@ -278,11 +291,12 @@ export function CredentialsTable({
           <KeyRound className="size-7" aria-hidden />
         </div>
         <p className="text-base font-semibold text-foreground">
-          {searchActive || filtersActive ? "Nothing matches these filters" : "Vault is empty"}
+          {emptyTitle ??
+            (searchActive || filtersActive ? "Nothing matches these filters" : "Vault is empty")}
         </p>
         <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
-          Save a PC login, Gmail, Outlook, or 2FA key. Reveal and copy secrets from the table after
-          saving.
+          {emptyDescription ??
+            "Save a PC login, Gmail, Outlook, or 2FA key. Reveal and copy secrets from the table after saving."}
         </p>
         {!searchActive && !filtersActive ? (
           <button
@@ -311,6 +325,7 @@ export function CredentialsTable({
           <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-md">
             <tr className="border-b border-border/80 text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
               <th className="px-4 py-3 font-semibold">Service</th>
+              {showPath ? <th className="px-3 py-3 font-semibold">Path</th> : null}
               <th className="px-3 py-3 font-semibold">Type</th>
               <th className="px-3 py-3 font-semibold">Email / username</th>
               <th className="min-w-[12rem] px-3 py-3 font-semibold">Secret</th>
@@ -335,6 +350,13 @@ export function CredentialsTable({
                     </p>
                   ) : null}
                 </td>
+                {showPath ? (
+                  <td className="max-w-[14rem] px-3 py-3">
+                    <span className="line-clamp-2 text-[11px] text-muted-foreground">
+                      {vaultPath(row)}
+                    </span>
+                  </td>
+                ) : null}
                 <td className="px-3 py-3">
                   <TypeBadge type={row.credential_type} />
                 </td>

@@ -369,9 +369,7 @@ export function CredentialsFormDialog({
             id="credential-service-name"
             value={serviceName}
             onChange={(e) => setServiceName(e.target.value)}
-            placeholder={
-              vaultScope === "job" ? "e.g. Greenhouse portal" : "e.g. Gmail personal"
-            }
+            placeholder={vaultScope === "job" ? "e.g. Greenhouse portal" : "e.g. Gmail personal"}
             maxLength={200}
             required
             className="form-control w-full"
