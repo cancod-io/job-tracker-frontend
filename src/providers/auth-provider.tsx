@@ -30,6 +30,7 @@ import {
   SESSION_EXPIRED_EVENT,
   TOKEN_REFRESHED_EVENT,
 } from "@/lib/auth-token";
+import { apiUrl } from "@/lib/api";
 import { assertOkResponse, fetchWithTimeout } from "@/lib/http";
 import type { AuthUser, RegisterResult, TokenResponse } from "@/types/auth";
 
@@ -54,7 +55,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 async function fetchMe(token: string): Promise<AuthUser> {
-  const res = await fetchWithTimeout("/api/v1/auth/me", {
+  const res = await fetchWithTimeout(apiUrl("/api/v1/auth/me"), {
     headers: { Authorization: `Bearer ${token}` },
     credentials: "omit",
   });
@@ -162,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     let res: Response;
     try {
-      res = await fetchWithTimeout("/api/v1/auth/login", {
+      res = await fetchWithTimeout(apiUrl("/api/v1/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -175,9 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw e;
     }
     if (!res.ok) {
-      const err = (await res.json().catch(() => ({}))) as Parameters<
-        typeof resolveLoginError
-      >[0];
+      const err = (await res.json().catch(() => ({}))) as Parameters<typeof resolveLoginError>[0];
       throw createLoginAuthError(resolveLoginError(err));
     }
     const data = (await res.json()) as TokenResponse;
@@ -198,7 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (payload: RegisterPayload): Promise<RegisterResult> => {
       let res: Response;
       try {
-        res = await fetchWithTimeout("/api/v1/auth/register", {
+        res = await fetchWithTimeout(apiUrl("/api/v1/auth/register"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

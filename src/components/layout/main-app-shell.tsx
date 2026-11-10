@@ -3,23 +3,16 @@
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { JOBS_PATH } from "@/config/auth-routes";
+import { HOME_PATH } from "@/config/auth-routes";
 import { userPrimaryNav } from "@/config/user-nav";
 import { UserNavLink } from "@/components/layout/user-nav-link";
 import { UserProfileMenu } from "@/components/layout/user-profile-menu";
 import { SiteFooter } from "@/components/layout/site-footer";
-import { RealtimeConnectionIndicator } from "@/components/realtime/realtime-connection-indicator";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { useRealtimeJobsStore } from "@/store/realtime-jobs-store";
-import { useNewJobsCountQuery } from "@/hooks/use-new-jobs-count-query";
 import { cn } from "@/lib/utils";
 
 export function MainAppShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const socketNewJobIds = useRealtimeJobsStore((s) => s.socketNewJobIds);
-  const { data: apiNewJobsTotal = 0 } = useNewJobsCountQuery();
-  // Prefer API-wide total; fall back to in-session socket ids after a live ingest.
-  const newJobsCount = Math.max(apiNewJobsTotal, socketNewJobIds.size);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -59,13 +52,12 @@ export function MainAppShell({ children }: { children: ReactNode }) {
               key={item.href}
               item={item}
               variant="sidebar"
-              badgeCount={item.href === JOBS_PATH ? newJobsCount : 0}
               onNavigate={() => setMobileOpen(false)}
             />
           ))}
         </nav>
         <p className="border-t border-border/80 px-4 py-3 text-xs text-muted-foreground">
-          Full-width job feed — save and track applications from any screen size.
+          Profile, credentials, and account settings.
         </p>
       </aside>
 
@@ -73,12 +65,11 @@ export function MainAppShell({ children }: { children: ReactNode }) {
         <div className="flex h-14 w-full items-center justify-between gap-3 px-4 sm:h-16 sm:gap-4 sm:px-6 lg:px-8 xl:px-10">
           <div className="flex min-w-0 flex-1 items-center gap-6 lg:gap-10">
             <Link
-              href={JOBS_PATH}
+              href={HOME_PATH}
               className="group flex shrink-0 items-center gap-2"
               aria-label="TrackCod home"
               onClick={() => setMobileOpen(false)}
             >
-
               <span className="relative flex shrink-0 items-center">
                 <img
                   src="/light-logo.png"
@@ -86,7 +77,6 @@ export function MainAppShell({ children }: { children: ReactNode }) {
                   width={220}
                   height={56}
                   className="h-10 w-auto max-w-[min(100%,11rem)] object-contain object-left dark:hidden sm:h-14 sm:max-w-[min(100%,13rem)]"
-                  
                 />
                 <img
                   src="/dark-logo.png"
@@ -94,25 +84,18 @@ export function MainAppShell({ children }: { children: ReactNode }) {
                   width={220}
                   height={56}
                   className="hidden h-10 w-auto max-w-[min(100%,11rem)] object-contain object-left dark:block sm:h-14 sm:max-w-[min(100%,13rem)]"
-                  
                 />
               </span>
             </Link>
 
             <nav className="hidden min-w-0 items-center gap-1 md:flex" aria-label="Main navigation">
               {userPrimaryNav.map((item) => (
-                <UserNavLink
-                  key={item.href}
-                  item={item}
-                  variant="topbar"
-                  badgeCount={item.href === JOBS_PATH ? newJobsCount : 0}
-                />
+                <UserNavLink key={item.href} item={item} variant="topbar" />
               ))}
             </nav>
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            <RealtimeConnectionIndicator />
             <ThemeToggle />
             <UserProfileMenu />
             <button

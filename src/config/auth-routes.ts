@@ -3,8 +3,8 @@ export const LOGIN_PATH = "/login";
 export const REGISTER_PATH = "/register";
 export const VERIFY_EMAIL_PATH = "/verify-email";
 
-/** Authenticated job board (protected). */
-export const JOBS_PATH = "/jobs";
+/** Default signed-in destination. */
+export const HOME_PATH = "/profile";
 
 /**
  * Normalize post-login redirect targets to same-origin paths only.
@@ -12,7 +12,7 @@ export const JOBS_PATH = "/jobs";
  */
 export function resolveSafeNextPath(
   raw: string | null | undefined,
-  fallback: string = JOBS_PATH,
+  fallback: string = HOME_PATH,
 ): string {
   let trimmed = raw?.trim() ?? "";
   if (!trimmed) return fallback;

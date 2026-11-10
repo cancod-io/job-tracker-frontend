@@ -11,7 +11,6 @@ import {
   Code2,
   Compass,
   Filter,
-  Globe,
   Heart,
   LayoutGrid,
   Quote,
@@ -76,7 +75,6 @@ type FaqDef = { question: string; answer: string };
 // ─── Data ──────────────────────────────────────────────────────────────────────
 
 const STATS: StatDef[] = [
-  { value: 12000, suffix: "+", label: "Jobs Indexed", Icon: Globe },
   { value: 6, suffix: "", label: "Team Members", Icon: Users },
   { value: 24, suffix: "+", label: "Features Shipped", Icon: Zap },
   { value: 98, suffix: "%", label: "Uptime", Icon: Trophy },
@@ -85,34 +83,30 @@ const STATS: StatDef[] = [
 const FEATURES: FeatureDef[] = [
   {
     Icon: Search,
-    title: "Every job, one place",
-    description:
-      "We aggregate Shopify ecosystem roles from across the web so you never have to check five job boards again.",
-    href: "/jobs",
+    title: "Your profile",
+    description: "Keep your account details, avatar, and CVs in one place.",
+    href: "/profile",
     gradient: "from-violet-500 to-indigo-500",
   },
   {
     Icon: Filter,
-    title: "Filter with precision",
-    description:
-      "Narrow by role, stack, seniority, and location to surface only the opportunities that actually fit you.",
-    href: "/jobs",
+    title: "Secure credentials",
+    description: "Store secrets in an encrypted vault that only you can manage.",
+    href: "/credentials",
     gradient: "from-blue-500 to-cyan-500",
   },
   {
     Icon: LayoutGrid,
-    title: "Track every application",
-    description:
-      "Move roles through a clean Kanban board — from saved, to applied, to offer — without losing a single thread.",
-    href: "/applications",
+    title: "Account access",
+    description: "Sign in, verify your email, and manage your password from your profile.",
+    href: "/profile",
     gradient: "from-amber-500 to-orange-500",
   },
   {
     Icon: Bookmark,
-    title: "Save for later",
-    description:
-      "Bookmark the listings that catch your eye and return when you are ready to make your move.",
-    href: "/saved",
+    title: "About the team",
+    description: "Meet the people who build and maintain TrackCod.",
+    href: "/about",
     gradient: "from-rose-500 to-pink-500",
   },
 ];
@@ -154,16 +148,16 @@ const TEAM: MemberDef[] = [
     id: 5,
     photo: "/scraper.png",
     name: "Howard Johnson",
-    role: "Senior Scraper Engineer",
-    bio: "The engine behind our data. Howard built and maintains the scraping pipelines that aggregate thousands of Shopify job listings daily — with precision, resilience, and dependable reliability.",
-    skills: ["Web Scraping", "Data Pipelines", "Automation"],
+    role: "Platform Engineer",
+    bio: "Howard keeps TrackCod's infrastructure resilient — from background services to operational tooling that the rest of the team relies on every day.",
+    skills: ["Automation", "Data Pipelines", "Reliability"],
   },
   {
     id: 6,
     photo: "/frontend.png",
     name: "Kian Arnold",
     role: "Senior Frontend Developer",
-    bio: "The craftsman behind every interface. Kian turns designs into fast, accessible, and delightful user experiences — from the job listing feed to every subtle micro-interaction that makes TrackCod feel polished.",
+    bio: "The craftsman behind every interface. Kian turns designs into fast, accessible experiences — from profile and credentials to the subtle micro-interactions that make TrackCod feel polished.",
     skills: ["Next.js", "TypeScript", "Tailwind CSS"],
   },
 ];
@@ -173,7 +167,7 @@ const MILESTONES: MilestoneDef[] = [
     date: "Q1 2024",
     title: "The Spark",
     description:
-      "Frustrated by scattered Shopify job listings, we asked: what if there was one place for everything? The idea for TrackCod was born over a 30-minute conversation.",
+      "We wanted a focused place for people to manage their account, documents, and secrets — without juggling spreadsheets and password notes. TrackCod started there.",
     Icon: Rocket,
     gradient: "from-violet-500 to-indigo-500",
   },
@@ -189,15 +183,15 @@ const MILESTONES: MilestoneDef[] = [
     date: "Q3 2024",
     title: "Alpha Launch",
     description:
-      "Internal alpha went live. Rough edges, big ambitions, and the first real signal that users wanted exactly this — and more.",
+      "Internal alpha went live. Rough edges, big ambitions, and the first real signal that users wanted a clean profile and vault experience.",
     Icon: Zap,
     gradient: "from-amber-500 to-orange-500",
   },
   {
     date: "Q4 2024",
-    title: "10,000 Jobs",
+    title: "Credentials Vault",
     description:
-      "A milestone worth celebrating — TrackCod crossed 10,000 curated Shopify jobs. The scrappy weekend pipeline was now a production-grade system.",
+      "Encrypted credentials landed in production — a secure place for secrets that only the account owner can manage.",
     Icon: Trophy,
     gradient: "from-emerald-500 to-teal-500",
   },
@@ -205,7 +199,7 @@ const MILESTONES: MilestoneDef[] = [
     date: "2025",
     title: "Scaling Up",
     description:
-      "New features, growing users, advanced filtering, and a team that ships with confidence every sprint. The best chapters are still ahead.",
+      "Stronger auth, profile tools, and a team that ships with confidence every sprint. The best chapters are still ahead.",
     Icon: TrendingUp,
     gradient: "from-rose-500 to-pink-500",
   },
@@ -216,7 +210,7 @@ const VALUES: ValueDef[] = [
     Icon: Heart,
     title: "User-First Always",
     description:
-      "Every decision starts and ends with the person looking for their next Shopify role.",
+      "Every decision starts and ends with the person managing their profile and credentials.",
     gradient: "from-rose-500 to-pink-500",
   },
   {
@@ -239,41 +233,31 @@ const STEPS: StepDef[] = [
   {
     Icon: Compass,
     step: "01",
-    title: "Discover",
-    description:
-      "Browse thousands of curated Shopify ecosystem roles, refreshed daily and filterable down to the exact fit.",
+    title: "Create an account",
+    description: "Register and verify your email so your profile is ready to use.",
   },
   {
     Icon: ClipboardList,
     step: "02",
-    title: "Track",
-    description:
-      "Save the listings that matter and move each application through a clean board — from applied, to interview, to offer.",
+    title: "Complete your profile",
+    description: "Add your details, avatar, and CVs from the profile page.",
   },
   {
     Icon: Target,
     step: "03",
-    title: "Land",
-    description:
-      "Stay organized and focused on the right opportunities, so your energy goes into landing the role — not chasing tabs.",
+    title: "Store credentials",
+    description: "Keep secrets in the encrypted vault instead of scattered notes.",
   },
 ];
 
 const ROLE_CATEGORIES: string[] = [
-  "Frontend Developer",
-  "Backend Engineer",
-  "Theme Developer",
-  "App Developer",
-  "Liquid Specialist",
-  "Full-Stack Engineer",
-  "Shopify Plus Developer",
-  "UI/UX Designer",
-  "Product Manager",
-  "DevOps Engineer",
-  "QA Engineer",
-  "Solutions Architect",
-  "Data Engineer",
-  "Technical Lead",
+  "Profile",
+  "CVs",
+  "Credentials vault",
+  "Email verification",
+  "Passwords",
+  "Admin users",
+  "Permissions",
 ];
 
 const TECH_STACK: string[] = [
@@ -289,29 +273,17 @@ const TECH_STACK: string[] = [
 
 const FAQS: FaqDef[] = [
   {
-    question: "Where do the job listings come from?",
+    question: "What can I do in TrackCod?",
     answer:
-      "Our scraping pipelines aggregate Shopify ecosystem roles from across the web — job boards, company career pages, and community channels — then curate and de-duplicate them into a single feed.",
+      "Sign in, manage your profile and CVs, and store secrets in an encrypted credentials vault.",
   },
   {
-    question: "How often are listings updated?",
-    answer:
-      "The pipeline runs continuously, so new roles surface daily and stale or filled positions are cleaned out automatically.",
+    question: "Who can see my credentials?",
+    answer: "You manage your own vault. Administrators can manage the admin vault separately.",
   },
   {
-    question: "What kinds of roles can I find?",
-    answer:
-      "Everything across the Shopify ecosystem — from theme and Liquid development to backend engineering, app development, design, product, and DevOps. If it touches Shopify, it likely lives here.",
-  },
-  {
-    question: "Can I track my applications?",
-    answer:
-      "Yes. Save any listing and move it through a Kanban-style board so you always know exactly where each application stands.",
-  },
-  {
-    question: "Is TrackCod free to use?",
-    answer:
-      "Browsing, filtering, saving, and tracking jobs are all free. We are focused on building the most useful job-search tool for the Shopify community first.",
+    question: "How do I update my account?",
+    answer: "Open Profile to change your details, password, avatar, and uploaded CVs.",
   },
 ];
 
@@ -617,27 +589,26 @@ export default function AboutPage() {
                   animation: "gradient-pan 4s linear infinite",
                 }}
               >
-                Shopify careers
+                your account
               </span>
             </h1>
 
             <p className={`mb-10 max-w-2xl text-[1.05rem] leading-loose md:text-lg ${T.textBody}`}>
-              TrackCod aggregates, curates, and tracks jobs across the entire Shopify ecosystem — so
-              developers, designers, and operators can spend their energy on what actually matters:
-              landing the right role.
+              TrackCod keeps your profile, CVs, and encrypted credentials together so your account
+              stays in one place.
             </p>
 
             <div className="flex flex-col items-center gap-3 sm:flex-row">
               <Link
-                href="/jobs"
+                href="/profile"
                 className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-7 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/40"
               >
-                Explore Jobs
+                Open profile
                 <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
               </Link>
               <a
                 href="#team"
-                className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-7 py-3 text-sm font-bold text-slate-700 backdrop-blur-sm transition-all duration-300 hover:border-slate-400 hover:bg-slate-50 dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 dark:hover:border-white/25 dark:hover:text-white"
+                className="dark:border-white/12 inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-7 py-3 text-sm font-bold text-slate-700 backdrop-blur-sm transition-all duration-300 hover:border-slate-400 hover:bg-slate-50 dark:bg-white/[0.04] dark:text-white/70 dark:hover:border-white/25 dark:hover:text-white"
               >
                 Meet the team
               </a>
@@ -690,18 +661,16 @@ export default function AboutPage() {
                 >
                   Built for people who{" "}
                   <span className="bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent dark:from-violet-400 dark:to-fuchsia-400">
-                    build with Shopify
+                    own their account
                   </span>
                 </h2>
                 <p className={`mb-5 text-[0.96rem] leading-loose ${T.textBody}`}>
-                  TrackCod exists because finding great Shopify jobs shouldn&apos;t require scrolling
-                  through five different job boards, a dozen LinkedIn searches, and a folder full of
-                  browser bookmarks.
+                  TrackCod exists so your profile, documents, and secrets live in one calm place —
+                  not scattered across notes apps, inboxes, and browser password managers.
                 </p>
                 <p className={`text-[0.96rem] leading-loose ${T.textBody}`}>
-                  We built the tool we wished existed — one that aggregates, curates, and tracks
-                  Shopify ecosystem jobs so developers and designers can spend their energy on what
-                  actually matters: landing the right role.
+                  We built the tool we wished existed: verified sign-in, a clear profile with CVs,
+                  and an encrypted credentials vault you control.
                 </p>
               </SectionReveal>
 
@@ -739,7 +708,7 @@ export default function AboutPage() {
             <SectionHeading
               eyebrow="What You Get"
               title="Everything you need, in one place"
-              subtitle="From discovery to offer, TrackCod gives you the tools to run a focused, organized job search."
+              subtitle="From sign-in to profile and credentials, TrackCod keeps your account organized in one place."
             />
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -779,8 +748,8 @@ export default function AboutPage() {
           <div className="mx-auto max-w-6xl px-6">
             <SectionHeading
               eyebrow="How It Works"
-              title="From scattered tabs to a focused search"
-              subtitle="Three simple steps take you from browsing to landing — without the chaos of a dozen open job boards."
+              title="Set up your account"
+              subtitle="Three steps: create an account, complete your profile, and store credentials."
             />
 
             <div className="relative grid gap-6 md:grid-cols-3">
@@ -816,9 +785,9 @@ export default function AboutPage() {
         <section className={`border-t py-28 ${T.sectionBorder}`}>
           <div className="mx-auto max-w-5xl px-6">
             <SectionHeading
-              eyebrow="Roles We Cover"
-              title="The whole Shopify ecosystem"
-              subtitle="Whatever your craft, there is a place for you here — and the list keeps growing."
+              eyebrow="What you can do"
+              title="Account tools"
+              subtitle="The signed-in app covers your profile, files, and encrypted credentials."
             />
 
             <SectionReveal>
@@ -920,7 +889,9 @@ export default function AboutPage() {
         <section className={`border-t py-24 ${T.sectionBorder}`}>
           <div className="mx-auto max-w-4xl px-6 text-center">
             <SectionReveal>
-              <p className={`mb-8 text-[11px] font-bold uppercase tracking-[0.22em] ${T.textFaint}`}>
+              <p
+                className={`mb-8 text-[11px] font-bold uppercase tracking-[0.22em] ${T.textFaint}`}
+              >
                 Powered by a modern stack
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3">
@@ -987,25 +958,27 @@ export default function AboutPage() {
                       className={`mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold backdrop-blur-sm dark:border-white/10 dark:bg-white/[0.05] ${T.textStrong}`}
                     >
                       <Quote className="h-3.5 w-3.5 text-violet-500 dark:text-violet-300" />
-                      Your next role is waiting
+                      Your account is ready
                     </div>
                     <h2
                       className={`mb-5 text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl ${T.heading}`}
                     >
-                      Ready to find your{" "}
+                      Ready to open your{" "}
                       <span className="bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 bg-clip-text text-transparent dark:from-violet-300 dark:via-fuchsia-300 dark:to-cyan-300">
-                        next Shopify role?
+                        profile?
                       </span>
                     </h2>
-                    <p className={`mx-auto mb-10 max-w-2xl text-base leading-loose md:text-lg ${T.textBody}`}>
-                      Thousands of curated Shopify ecosystem jobs, smart filtering, and a tracker to
-                      keep every application organized — all in one place.
+                    <p
+                      className={`mx-auto mb-10 max-w-2xl text-base leading-loose md:text-lg ${T.textBody}`}
+                    >
+                      Profile details, uploaded CVs, and an encrypted credentials vault — all in one
+                      place.
                     </p>
                     <Link
-                      href="/jobs"
+                      href="/profile"
                       className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/40"
                     >
-                      Browse Jobs Now
+                      Open profile
                       <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
                     </Link>
                   </div>

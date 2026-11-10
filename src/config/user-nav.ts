@@ -1,11 +1,4 @@
-import {
-  Bookmark,
-  Briefcase,
-  KeyRound,
-  LayoutGrid,
-  Sparkles,
-  type LucideIcon,
-} from "lucide-react";
+import { KeyRound, Sparkles, UserRound, type LucideIcon } from "lucide-react";
 
 export type UserNavItem = {
   href: string;
@@ -14,9 +7,7 @@ export type UserNavItem = {
 };
 
 export const userPrimaryNav: UserNavItem[] = [
-  { href: "/jobs", label: "Jobs", icon: LayoutGrid },
-  { href: "/applications", label: "Applications", icon: Briefcase },
-  { href: "/saved", label: "Saved jobs", icon: Bookmark },
+  { href: "/profile", label: "Profile", icon: UserRound },
   { href: "/credentials", label: "Credentials", icon: KeyRound },
   { href: "/about", label: "About", icon: Sparkles },
 ];

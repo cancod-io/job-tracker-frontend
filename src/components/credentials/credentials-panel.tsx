@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, RefreshCw } from "lucide-react";
 import { CredentialsDeleteConfirm } from "@/components/credentials/credentials-delete-confirm";
 import { CredentialsFormDialog } from "@/components/credentials/credentials-form-dialog";
@@ -29,7 +29,7 @@ import type {
   SecureCredentialUpdateRequest,
 } from "@/types/secure-credentials";
 
-const DEFAULT_PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 50;
 
 export function CredentialsPanel() {
   const [page, setPage] = useState(1);
@@ -70,6 +70,23 @@ export function CredentialsPanel() {
     void load();
   }, [load]);
 
+  const skipSearchPageReset = useRef(true);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setSearch(searchDraft.trim());
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [searchDraft]);
+
+  useEffect(() => {
+    if (skipSearchPageReset.current) {
+      skipSearchPageReset.current = false;
+      return;
+    }
+    setPage(1);
+  }, [search]);
+
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
   const currentPage = Math.min(page, totalPages);
@@ -80,11 +97,6 @@ export function CredentialsPanel() {
 
   const searchActive = search.length > 0;
   const filtersActive = typeFilter !== "all";
-
-  const applySearch = () => {
-    setSearch(searchDraft.trim());
-    setPage(1);
-  };
 
   const clearSearchAndFilters = () => {
     setSearchDraft("");
@@ -135,55 +147,53 @@ export function CredentialsPanel() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
-          <form
-            className="flex min-w-0 flex-1 gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              applySearch();
-            }}
-          >
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
             <SearchInput
               value={searchDraft}
               onChange={setSearchDraft}
-              placeholder="Search credentials…"
+              placeholder="Search by service name…"
               aria-label="Search credentials"
               className="min-w-0 flex-1"
             />
-            <button
-              type="submit"
-              className="hover:bg-primary/92 shrink-0 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm"
-            >
-              Search
-            </button>
-          </form>
-          <label className="flex items-center gap-2 whitespace-nowrap text-sm text-muted-foreground">
-            <span className="sr-only sm:not-sr-only">Type</span>
-            <select
-              value={typeFilter}
-              onChange={(e) => {
-                setTypeFilter(e.target.value as CredentialType | "all");
-                setPage(1);
-              }}
-              className="form-control h-10 min-w-[9rem]"
-              aria-label="Filter by credential type"
-            >
-              {CREDENTIAL_TYPE_FILTER_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
+            {searchActive || filtersActive ? (
+              <button
+                type="button"
+                onClick={clearSearchAndFilters}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+          <div
+            className="flex flex-wrap gap-1.5"
+            role="group"
+            aria-label="Filter by credential type"
+          >
+            {CREDENTIAL_TYPE_FILTER_OPTIONS.map((opt) => {
+              const active = typeFilter === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    setTypeFilter(opt.value);
+                    setPage(1);
+                  }}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                    active
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                  aria-pressed={active}
+                >
                   {opt.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          {searchActive || filtersActive ? (
-            <button
-              type="button"
-              onClick={clearSearchAndFilters}
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              Clear
-            </button>
-          ) : null}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button

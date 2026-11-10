@@ -66,18 +66,14 @@ export function apiErrorCode(data: ApiAuthErrorShape): string | null {
 function parseLoginErrorDetails(details: unknown): LoginErrorDetails {
   if (!details || typeof details !== "object") return {};
   const d = details as Record<string, unknown>;
-  const field =
-    d.field === "email" || d.field === "password" ? (d.field as LoginField) : undefined;
+  const field = d.field === "email" || d.field === "password" ? (d.field as LoginField) : undefined;
   const fields = Array.isArray(d.fields)
     ? d.fields.filter((f): f is LoginField => f === "email" || f === "password")
     : undefined;
   return { field, fields };
 }
 
-function fieldsFromCodeAndDetails(
-  code: string | null,
-  details: LoginErrorDetails,
-): LoginField[] {
+function fieldsFromCodeAndDetails(code: string | null, details: LoginErrorDetails): LoginField[] {
   const out: LoginField[] = [];
   if (details.field) out.push(details.field);
   if (details.fields?.length) out.push(...details.fields);
@@ -142,7 +138,8 @@ export function resolveLoginError(
 ): ResolvedLoginError {
   const code = apiErrorCode(data);
   const details = parseLoginErrorDetails(data.error?.details);
-  const message = apiErrorMessage(data) ?? (typeof data.detail === "string" ? data.detail : fallback);
+  const message =
+    apiErrorMessage(data) ?? (typeof data.detail === "string" ? data.detail : fallback);
   const fields = isFormLevelLoginCode(code) ? [] : fieldsFromCodeAndDetails(code, details);
 
   return { message, code, fields };
@@ -159,8 +156,7 @@ export function isLoginAuthError(err: unknown): err is LoginAuthError {
   return err instanceof Error && ("code" in err || "fields" in err);
 }
 
-export const SESSION_EXPIRED_MESSAGE =
-  "Your session has expired. Please log in again.";
+export const SESSION_EXPIRED_MESSAGE = "Your session has expired. Please log in again.";
 
 export class SessionExpiredError extends Error {
   override readonly name = "SessionExpiredError";

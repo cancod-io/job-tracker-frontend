@@ -47,7 +47,10 @@ export function FloatingMenuPortal({
     let top = r.bottom + gap;
     if (top + ph > window.innerHeight - VIEWPORT_MARGIN) {
       const above = r.top - gap - ph;
-      top = above >= VIEWPORT_MARGIN ? above : Math.max(VIEWPORT_MARGIN, window.innerHeight - ph - VIEWPORT_MARGIN);
+      top =
+        above >= VIEWPORT_MARGIN
+          ? above
+          : Math.max(VIEWPORT_MARGIN, window.innerHeight - ph - VIEWPORT_MARGIN);
     }
 
     setCoords({ top, left });

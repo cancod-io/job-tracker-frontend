@@ -3,7 +3,7 @@ import { UserLoginForm } from "@/components/auth/user-login-form";
 
 export const metadata: Metadata = {
   title: "Sign in",
-  description: "Sign in to Shopify Job Tracker.",
+  description: "Sign in to TrackCod.",
 };
 
 export default function UserLoginPage() {

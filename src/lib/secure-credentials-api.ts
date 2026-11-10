@@ -4,11 +4,11 @@
  * Endpoints (own rows only):
  *   GET    /api/v1/credentials              — list (page, page_size, q, credential_type)
  *   POST   /api/v1/credentials              — create (requires secret)
- *   GET    /api/v1/credentials/{id}         — detail (may include username/notes/secret for edit)
+ *   GET    /api/v1/credentials/{id}         — detail, includes the owner's secret
  *   PUT    /api/v1/credentials/{id}         — update (omit secret to keep)
  *   DELETE /api/v1/credentials/{id}         — delete (204)
  *
- * List table never displays plaintext secrets. Username may be shown when returned.
+ * The list omits secrets. Opening a credential returns the secret so it can be shown or copied.
  */
 import { fetchAuthed } from "@/lib/auth-session";
 import { assertOkResponse } from "@/lib/http";
@@ -32,7 +32,7 @@ export type ListSecureCredentialsParams = {
 const CREDENTIAL_TYPES: readonly CredentialType[] = [
   "pc_login",
   "company_email",
-  "api_key",
+  "two_fa_key",
   "other",
 ];
 
@@ -52,6 +52,8 @@ function normalizeCredentialType(value: unknown): CredentialType {
   if (typeof value === "string" && CREDENTIAL_TYPES.includes(value as CredentialType)) {
     return value as CredentialType;
   }
+  // Legacy value before API Key was replaced by 2FA Key.
+  if (value === "api_key") return "other";
   return "other";
 }
 
@@ -71,8 +73,7 @@ function normalizeNullableString(value: unknown): string | null {
 function normalizeCredential(
   raw: Partial<SecureCredential> & Record<string, unknown> & { id: number },
 ): SecureCredential {
-  const username =
-    typeof raw.username === "string" && raw.username.trim() ? raw.username : null;
+  const username = typeof raw.username === "string" && raw.username.trim() ? raw.username : null;
   const notes = typeof raw.notes === "string" ? raw.notes : null;
   // Secret only kept when the API explicitly returns it (for edit reveal). Never invent it.
   const secret = typeof raw.secret === "string" && raw.secret.length > 0 ? raw.secret : null;
@@ -91,10 +92,8 @@ function normalizeCredential(
     has_notes: raw.has_notes === true || Boolean(notes?.trim()),
     created_by_name: normalizeNullableString(raw.created_by_name),
     updated_by_name: normalizeNullableString(raw.updated_by_name),
-    created_at:
-      typeof raw.created_at === "string" ? raw.created_at : new Date(0).toISOString(),
-    updated_at:
-      typeof raw.updated_at === "string" ? raw.updated_at : new Date(0).toISOString(),
+    created_at: typeof raw.created_at === "string" ? raw.created_at : new Date(0).toISOString(),
+    updated_at: typeof raw.updated_at === "string" ? raw.updated_at : new Date(0).toISOString(),
   };
 }
 

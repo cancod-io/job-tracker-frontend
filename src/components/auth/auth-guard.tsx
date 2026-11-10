@@ -13,9 +13,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (status !== "unauthenticated") return;
     const next = pathname && pathname !== "/" ? resolveSafeNextPath(pathname) : undefined;
-    const loginUrl = next
-      ? `${LOGIN_PATH}?next=${encodeURIComponent(next)}`
-      : LOGIN_PATH;
+    const loginUrl = next ? `${LOGIN_PATH}?next=${encodeURIComponent(next)}` : LOGIN_PATH;
     router.replace(loginUrl);
   }, [status, router, pathname]);
 

@@ -5,7 +5,6 @@ import { type LucideIcon } from "lucide-react";
 import {
   Code2,
   Crown,
-  Globe,
   Heart,
   Quote,
   Rocket,
@@ -44,7 +43,6 @@ type ValueDef = { Icon: LucideIcon; title: string; description: string; gradient
 // ─── Data ──────────────────────────────────────────────────────────────────────
 
 const STATS: StatDef[] = [
-  { value: 12000, suffix: "+", label: "Jobs Indexed", Icon: Globe },
   { value: 6, suffix: "", label: "Team Members", Icon: Users },
   { value: 24, suffix: "+", label: "Features Shipped", Icon: Zap },
   { value: 98, suffix: "%", label: "Uptime", Icon: Trophy },
@@ -91,9 +89,9 @@ const TEAM: MemberDef[] = [
     id: 5,
     photo: "/scraper.png",
     name: "Howard Johnson",
-    role: "Senior Scraper Engineer",
-    bio: "The engine behind our data. Howard built and maintains the scraping pipelines that aggregate thousands of Shopify job listings daily — with precision, resilience, and the kind of reliability the team depends on.",
-    skills: ["Web Scraping", "Data Pipelines", "Automation"],
+    role: "Platform Engineer",
+    bio: "Howard keeps TrackCod's infrastructure resilient — from background services to operational tooling that the rest of the team relies on every day.",
+    skills: ["Automation", "Data Pipelines", "Reliability"],
     isBirthday: false,
   },
   {
@@ -101,7 +99,7 @@ const TEAM: MemberDef[] = [
     photo: "/frontend.png",
     name: "Kian Arnold",
     role: "Senior Frontend Developer",
-    bio: "The craftsman behind every interface. Kian turns designs into fast, accessible, and delightful user experiences — from the job listing feed to every subtle micro-interaction that makes TrackCod feel polished.",
+    bio: "The craftsman behind every interface. Kian turns designs into fast, accessible experiences — from profile and credentials to the subtle micro-interactions that make TrackCod feel polished.",
     skills: ["Next.js", "TypeScript", "Tailwind CSS"],
     isBirthday: false,
   },
@@ -120,7 +118,7 @@ const MILESTONES: MilestoneDef[] = [
     date: "Q1 2024",
     title: "The Spark",
     description:
-      "Frustrated by scattered Shopify job listings, we asked: what if there was one place for everything? The idea for TrackCod was born over a 30-minute conversation.",
+      "We wanted a focused place for people to manage their account, documents, and secrets — without juggling spreadsheets and password notes. TrackCod started there.",
     Icon: Rocket,
     gradient: "from-violet-500 to-indigo-500",
   },
@@ -136,15 +134,15 @@ const MILESTONES: MilestoneDef[] = [
     date: "Q3 2024",
     title: "Alpha Launch",
     description:
-      "Internal alpha went live. Rough edges, big ambitions, and the first real signal that users wanted exactly this — and more.",
+      "Internal alpha went live. Rough edges, big ambitions, and the first real signal that users wanted a clean profile and vault experience.",
     Icon: Zap,
     gradient: "from-amber-500 to-orange-500",
   },
   {
     date: "Q4 2024",
-    title: "10,000 Jobs",
+    title: "Credentials Vault",
     description:
-      "A milestone worth celebrating — TrackCod crossed 10,000 curated Shopify jobs. The scrappy weekend pipeline was now a production-grade system.",
+      "Encrypted credentials landed in production — a secure place for secrets that only the account owner can manage.",
     Icon: Trophy,
     gradient: "from-emerald-500 to-teal-500",
   },
@@ -152,7 +150,7 @@ const MILESTONES: MilestoneDef[] = [
     date: "2025",
     title: "Scaling Up",
     description:
-      "New features, growing users, advanced filtering, and a team that ships with confidence every sprint. The best chapters are still ahead.",
+      "Stronger auth, profile tools, and a team that ships with confidence every sprint. The best chapters are still ahead.",
     Icon: TrendingUp,
     gradient: "from-rose-500 to-pink-500",
   },
@@ -162,7 +160,8 @@ const VALUES: ValueDef[] = [
   {
     Icon: Heart,
     title: "User-First Always",
-    description: "Every decision starts and ends with the person looking for their next Shopify role.",
+    description:
+      "Every decision starts and ends with the person managing their profile and credentials.",
     gradient: "from-rose-500 to-pink-500",
   },
   {
@@ -294,9 +293,7 @@ function TeamCard({ member, delay }: { member: MemberDef; delay: number }) {
 
       {/* Card body */}
       <div className="flex flex-1 flex-col px-6 pb-7 pt-4">
-        <p
-          className={`mb-0.5 font-bold text-white ${member.isBirthday ? "text-xl" : "text-lg"}`}
-        >
+        <p className={`mb-0.5 font-bold text-white ${member.isBirthday ? "text-xl" : "text-lg"}`}>
           {member.name}
         </p>
         <p
@@ -490,7 +487,7 @@ export default function AboutPage() {
                     />
                     {/* Bottom overlay with label */}
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0b0b18] via-[#0b0b18]/70 to-transparent pb-5 pt-20 text-center">
-                      <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-400/12 px-3 py-1.5 text-xs font-bold text-amber-300 backdrop-blur-sm">
+                      <div className="bg-amber-400/12 inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 px-3 py-1.5 text-xs font-bold text-amber-300 backdrop-blur-sm">
                         <Crown className="h-3 w-3" />
                         PM &amp; Team Lead
                       </div>
@@ -560,16 +557,13 @@ export default function AboutPage() {
 
               {/* Creative message */}
               <blockquote className="relative mb-9">
-                <Quote
-                  className="mb-3 h-7 w-7 text-amber-400/35"
-                  aria-hidden
-                />
+                <Quote className="mb-3 h-7 w-7 text-amber-400/35" aria-hidden />
                 <p className="text-[1rem] leading-loose text-white/50 md:text-[1.08rem]">
                   This project wasn&apos;t just built — it was{" "}
                   <span className="font-semibold text-white/80">driven</span>. Every sprint, every
                   feature, every late-night push carries your vision at its core. TrackCod exists
-                  because you believed in turning a real frustration into something the Shopify
-                  community could rely on.
+                  because you believed in turning a real frustration into something people could
+                  rely on for their profile and credentials.
                 </p>
                 <p className="mt-4 text-[1rem] leading-loose md:text-[1.08rem]">
                   <span className="font-semibold text-amber-300/90">
@@ -613,12 +607,7 @@ export default function AboutPage() {
           <div className="mx-auto max-w-4xl px-6">
             <SectionReveal>
               <div className="overflow-hidden rounded-3xl border border-white/[0.07] bg-white/[0.02] shadow-2xl">
-                <video
-                  src="/video.mp4"
-                  controls
-                  playsInline
-                  className="h-auto w-full"
-                />
+                <video src="/video.mp4" controls playsInline className="h-auto w-full" />
               </div>
             </SectionReveal>
           </div>
@@ -662,18 +651,16 @@ export default function AboutPage() {
                 <h2 className="mb-6 text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl lg:text-5xl">
                   Built for people who{" "}
                   <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
-                    build with Shopify
+                    own their account
                   </span>
                 </h2>
                 <p className="mb-5 text-[0.96rem] leading-loose text-white/45">
-                  TrackCod exists because finding great Shopify jobs shouldn&apos;t require scrolling
-                  through five different job boards, a dozen LinkedIn searches, and a folder full of
-                  browser bookmarks.
+                  TrackCod exists so your profile, documents, and secrets live in one calm place —
+                  not scattered across notes apps, inboxes, and browser password managers.
                 </p>
                 <p className="text-[0.96rem] leading-loose text-white/45">
-                  We built the tool we wished existed — one that aggregates, curates, and tracks
-                  Shopify ecosystem jobs so developers and designers can spend their energy on what
-                  actually matters: landing the right role.
+                  We built the tool we wished existed: verified sign-in, a clear profile with CVs,
+                  and an encrypted credentials vault you control.
                 </p>
               </SectionReveal>
 
@@ -844,9 +831,9 @@ export default function AboutPage() {
                       </span>
                     </h2>
                     <p className="mx-auto mb-4 max-w-2xl text-base leading-loose text-white/55 md:text-lg">
-                      From the first conversation that sparked this idea, to every late-night standup,
-                      every feature shipped, every blocker cleared — your leadership and vision have
-                      been the foundation everything else is built on.
+                      From the first conversation that sparked this idea, to every late-night
+                      standup, every feature shipped, every blocker cleared — your leadership and
+                      vision have been the foundation everything else is built on.
                     </p>
                     <p className="mx-auto max-w-xl text-base leading-loose text-white/55 md:text-lg">
                       Here&apos;s to another year of building great things together.{" "}

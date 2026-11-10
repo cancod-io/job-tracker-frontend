@@ -14,10 +14,5 @@ type SkeletonProps = {
  * `prefers-reduced-motion` automatically.
  */
 export function Skeleton({ className, "aria-hidden": ariaHidden = true }: SkeletonProps) {
-  return (
-    <div
-      aria-hidden={ariaHidden}
-      className={cn("skeleton-shimmer rounded-md", className)}
-    />
-  );
+  return <div aria-hidden={ariaHidden} className={cn("skeleton-shimmer rounded-md", className)} />;
 }

@@ -1,4 +1,4 @@
-name: CI Build & Notify VPS
+name: CI Build
 
 on:
   pull_request:
@@ -14,31 +14,19 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: "24.x"
+          node-version: "22.x"
           cache: "npm"
 
       - name: Install dependencies
         run: npm ci
 
+      - name: Run check
+        run: npm run check
+
       - name: Run build
         run: npm run build
-
-  notify-vps:
-    name: Notify VPS Deployment
-    needs: build-and-validate
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Send webhook to VPS
-        run: |
-          curl --fail --retry 3 --max-time 15 \
-            -X POST http://147.93.180.179:8083/deploy/ \
-            -H "Content-Type: application/json" \
-            -H "X-Deploy-Token: ${{ secrets.DEPLOY_TOKEN }}" \
-            -d '{}'

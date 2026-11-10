@@ -63,10 +63,7 @@ export function ProfileSectionNav() {
   }
 
   return (
-    <nav
-      aria-label="Profile sections"
-      className="lg:sticky lg:top-24"
-    >
+    <nav aria-label="Profile sections" className="lg:sticky lg:top-24">
       {/* Mobile / tablet: horizontal scroll-snap pills */}
       <ul className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 lg:hidden">
         {PROFILE_SECTIONS.map((s) => {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { CREDENTIAL_TYPE_OPTIONS } from "@/components/credentials/constants";
+import { CREDENTIAL_TYPE_OPTIONS, secretFieldCopy } from "@/components/credentials/constants";
 import { Modal } from "@/components/ui/modal";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
@@ -62,7 +62,11 @@ function SecretInput({
         aria-label={visible ? "Hide secret" : "Show typed secret"}
         tabIndex={-1}
       >
-        {visible ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+        {visible ? (
+          <EyeOff className="size-4" aria-hidden />
+        ) : (
+          <Eye className="size-4" aria-hidden />
+        )}
       </button>
     </div>
   );
@@ -182,6 +186,7 @@ export function CredentialsFormDialog({
   }
 
   const isCreate = mode === "create";
+  const secretCopy = secretFieldCopy(credentialType);
 
   return (
     <Modal
@@ -189,15 +194,23 @@ export function CredentialsFormDialog({
       title={isCreate ? "Add Credential" : "Edit Credential"}
       description={
         isCreate
-          ? "Store a password or key securely. Secrets are write-only and never returned by the API."
+          ? "Store a password or key. After saving, show and copy it from the credential card."
           : `Update ${initial?.service_name ?? "credential"}. Leave secret blank to keep the existing value.`
       }
       onClose={onClose}
       maxWidth="max-w-lg"
     >
-      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4" autoComplete="off" noValidate>
+      <form
+        onSubmit={(e) => void handleSubmit(e)}
+        className="space-y-4"
+        autoComplete="off"
+        noValidate
+      >
         <div className="space-y-1.5">
-          <label htmlFor="credential-service-name" className="text-xs font-semibold text-foreground">
+          <label
+            htmlFor="credential-service-name"
+            className="text-xs font-semibold text-foreground"
+          >
             Service name <span className="text-rose-500">*</span>
           </label>
           <input
@@ -231,7 +244,7 @@ export function CredentialsFormDialog({
 
         <div className="space-y-1.5">
           <label htmlFor="credential-username" className="text-xs font-semibold text-foreground">
-            Username / Email
+            {credentialType === "two_fa_key" ? "Account label" : "Username / Email"}
           </label>
           <input
             id="credential-username"
@@ -240,7 +253,9 @@ export function CredentialsFormDialog({
               setUsername(e.target.value);
               if (e.target.value) setClearUsername(false);
             }}
-            placeholder="Optional"
+            placeholder={
+              credentialType === "two_fa_key" ? "Optional — e.g. Google, GitHub" : "Optional"
+            }
             maxLength={500}
             disabled={!isCreate && clearUsername}
             autoComplete="off"
@@ -257,14 +272,14 @@ export function CredentialsFormDialog({
                 }}
                 className="size-3.5 accent-primary"
               />
-              Clear stored username
+              Clear stored {credentialType === "two_fa_key" ? "label" : "username"}
             </label>
           ) : null}
         </div>
 
         <div className="space-y-1.5">
           <label htmlFor="credential-secret" className="text-xs font-semibold text-foreground">
-            Password / Secret {isCreate ? <span className="text-rose-500">*</span> : null}
+            {secretCopy.label} {isCreate ? <span className="text-rose-500">*</span> : null}
           </label>
           <SecretInput
             id="credential-secret"
@@ -273,19 +288,19 @@ export function CredentialsFormDialog({
             required={isCreate}
             placeholder={
               isCreate
-                ? "Required"
+                ? secretCopy.placeholderCreate
                 : initial?.has_secret && !secret
-                  ? "Leave blank to keep existing, or type a new secret"
-                  : "Enter secret"
+                  ? secretCopy.placeholderEdit
+                  : secretCopy.placeholderCreate
             }
           />
-          {!isCreate ? (
-            <p className="text-xs text-muted-foreground">
-              {secret
-                ? "Use the eye icon to show or hide the secret. Leave unchanged to keep it."
-                : "Leave blank to keep the existing secret, or type a new value to replace it."}
-            </p>
-          ) : null}
+          <p className="text-xs text-muted-foreground">
+            {isCreate
+              ? secretCopy.hint
+              : secret
+                ? "Use the eye icon to show or hide. Leave unchanged to keep it."
+                : secretCopy.placeholderEdit}
+          </p>
         </div>
 
         <div className="space-y-1.5">
