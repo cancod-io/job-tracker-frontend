@@ -143,9 +143,7 @@ function normalizeTree(raw: Record<string, unknown>): CredentialTreeResponse {
       ? (raw.personal as Record<string, unknown>)
       : {};
   const jobsRaw =
-    typeof raw.jobs === "object" && raw.jobs !== null
-      ? (raw.jobs as Record<string, unknown>)
-      : {};
+    typeof raw.jobs === "object" && raw.jobs !== null ? (raw.jobs as Record<string, unknown>) : {};
   const employersRaw = Array.isArray(jobsRaw.employers) ? jobsRaw.employers : [];
 
   const personalItems = Array.isArray(personalRaw.items)
