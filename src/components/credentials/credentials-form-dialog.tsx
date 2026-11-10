@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { CREDENTIAL_TYPE_OPTIONS, secretFieldCopy } from "@/components/credentials/constants";
+import {
+  CREDENTIAL_TYPE_OPTIONS,
+  isEmailCredentialType,
+  isTwoFaCredentialType,
+  secretFieldCopy,
+} from "@/components/credentials/constants";
 import { Modal } from "@/components/ui/modal";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
@@ -244,7 +249,11 @@ export function CredentialsFormDialog({
 
         <div className="space-y-1.5">
           <label htmlFor="credential-username" className="text-xs font-semibold text-foreground">
-            {credentialType === "two_fa_key" ? "Account label" : "Username / Email"}
+            {isTwoFaCredentialType(credentialType)
+              ? "Account label"
+              : isEmailCredentialType(credentialType)
+                ? "Email"
+                : "Username / Email"}
           </label>
           <input
             id="credential-username"
@@ -254,7 +263,15 @@ export function CredentialsFormDialog({
               if (e.target.value) setClearUsername(false);
             }}
             placeholder={
-              credentialType === "two_fa_key" ? "Optional — e.g. Google, GitHub" : "Optional"
+              isTwoFaCredentialType(credentialType)
+                ? "Optional — e.g. Google, GitHub"
+                : credentialType === "gmail"
+                  ? "name@gmail.com"
+                  : credentialType === "outlook"
+                    ? "name@outlook.com"
+                    : isEmailCredentialType(credentialType)
+                      ? "name@company.com"
+                      : "Optional"
             }
             maxLength={500}
             disabled={!isCreate && clearUsername}
@@ -272,7 +289,12 @@ export function CredentialsFormDialog({
                 }}
                 className="size-3.5 accent-primary"
               />
-              Clear stored {credentialType === "two_fa_key" ? "label" : "username"}
+              Clear stored{" "}
+              {isTwoFaCredentialType(credentialType)
+                ? "label"
+                : isEmailCredentialType(credentialType)
+                  ? "email"
+                  : "username"}
             </label>
           ) : null}
         </div>

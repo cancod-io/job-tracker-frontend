@@ -1,6 +1,12 @@
 /** Mirrors OpenAPI schemas for `/api/v1/credentials` (user vault — own rows only). */
 
-export type CredentialType = "pc_login" | "company_email" | "two_fa_key" | "other";
+export type CredentialType =
+  | "pc_login"
+  | "gmail"
+  | "outlook"
+  | "company_email"
+  | "two_fa_key"
+  | "other";
 
 /**
  * List/detail response.

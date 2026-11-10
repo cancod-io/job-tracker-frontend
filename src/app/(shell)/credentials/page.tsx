@@ -10,12 +10,10 @@ export default function CredentialsPage() {
     <>
       <PageHeader
         title="Credentials"
-        description="Store your own logins and keys. Search, filter by type, then show or copy a secret from its card."
+        description="Your vault in one view — search, filter by type, reveal or copy secrets, and edit without leaving the table."
         breadcrumbs={[{ label: "Credentials" }]}
       />
-      <div className="rounded-2xl border border-border/80 bg-card/50 p-4 shadow-sm md:p-6">
-        <CredentialsPanel />
-      </div>
+      <CredentialsPanel />
     </>
   );
 }

@@ -1,13 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  KeyRound,
+  Mail,
+  Monitor,
+  Plus,
+  RefreshCw,
+  Shield,
+} from "lucide-react";
 import { CredentialsDeleteConfirm } from "@/components/credentials/credentials-delete-confirm";
 import { CredentialsFormDialog } from "@/components/credentials/credentials-form-dialog";
 import { CredentialsTable } from "@/components/credentials/credentials-table";
 import {
   CREDENTIAL_TYPE_FILTER_OPTIONS,
   CREDENTIALS_PAGE_SIZE_OPTIONS,
+  credentialTypeBadgeClass,
+  formatCredentialType,
 } from "@/components/credentials/constants";
 import { ErrorAlert } from "@/components/ui/error-alert";
 import { SearchInput } from "@/components/ui/search-input";
@@ -30,6 +41,15 @@ import type {
 } from "@/types/secure-credentials";
 
 const DEFAULT_PAGE_SIZE = 50;
+
+const TYPE_ICONS: Record<CredentialType, typeof Monitor> = {
+  pc_login: Monitor,
+  gmail: Mail,
+  outlook: Mail,
+  company_email: Mail,
+  two_fa_key: Shield,
+  other: KeyRound,
+};
 
 export function CredentialsPanel() {
   const [page, setPage] = useState(1);
@@ -95,6 +115,14 @@ export function CredentialsPanel() {
     if (data && page > totalPages) setPage(totalPages);
   }, [data, page, totalPages]);
 
+  const typeCounts = useMemo(() => {
+    const counts: Partial<Record<CredentialType, number>> = {};
+    for (const row of data?.items ?? []) {
+      counts[row.credential_type] = (counts[row.credential_type] ?? 0) + 1;
+    }
+    return counts;
+  }, [data?.items]);
+
   const searchActive = search.length > 0;
   const filtersActive = typeFilter !== "all";
 
@@ -146,74 +174,79 @@ export function CredentialsPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-            <SearchInput
-              value={searchDraft}
-              onChange={setSearchDraft}
-              placeholder="Search by service name…"
-              aria-label="Search credentials"
-              className="min-w-0 flex-1"
-            />
-            {searchActive || filtersActive ? (
-              <button
-                type="button"
-                onClick={clearSearchAndFilters}
-                className="text-sm font-medium text-primary hover:underline"
-              >
-                Clear
-              </button>
-            ) : null}
-          </div>
-          <div
-            className="flex flex-wrap gap-1.5"
-            role="group"
-            aria-label="Filter by credential type"
-          >
-            {CREDENTIAL_TYPE_FILTER_OPTIONS.map((opt) => {
-              const active = typeFilter === opt.value;
-              return (
+      <div className="rounded-2xl border border-border/70 bg-gradient-to-br from-primary/[0.06] via-card to-muted/30 p-4 md:p-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0 flex-1 space-y-3">
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+              <SearchInput
+                value={searchDraft}
+                onChange={setSearchDraft}
+                placeholder="Search by service name…"
+                aria-label="Search credentials"
+                className="min-w-0 flex-1"
+              />
+              {searchActive || filtersActive ? (
                 <button
-                  key={opt.value}
                   type="button"
-                  onClick={() => {
-                    setTypeFilter(opt.value);
-                    setPage(1);
-                  }}
-                  className={cn(
-                    "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                    active
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
-                  aria-pressed={active}
+                  onClick={clearSearchAndFilters}
+                  className="shrink-0 text-sm font-semibold text-primary hover:underline"
                 >
-                  {opt.label}
+                  Clear
                 </button>
-              );
-            })}
+              ) : null}
+            </div>
+            <div
+              className="flex flex-wrap gap-1.5"
+              role="group"
+              aria-label="Filter by credential type"
+            >
+              {CREDENTIAL_TYPE_FILTER_OPTIONS.map((opt) => {
+                const active = typeFilter === opt.value;
+                const Icon =
+                  opt.value === "all" ? KeyRound : TYPE_ICONS[opt.value as CredentialType];
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      setTypeFilter(opt.value);
+                      setPage(1);
+                    }}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                      active
+                        ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                        : "border-border/80 bg-card/80 text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                    aria-pressed={active}
+                  >
+                    <Icon className="size-3.5" aria-hidden />
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => void load()}
-            disabled={loading}
-            className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-60"
-            aria-label="Refresh credentials"
-          >
-            <RefreshCw className={cn("size-4", loading && "animate-spin")} aria-hidden />
-            Refresh
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowCreate(true)}
-            className="hover:bg-primary/92 inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground shadow-sm"
-          >
-            <Plus className="size-4" aria-hidden />
-            Add Credential
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void load()}
+              disabled={loading}
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-60"
+              aria-label="Refresh credentials"
+            >
+              <RefreshCw className={cn("size-4", loading && "animate-spin")} aria-hidden />
+              Refresh
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreate(true)}
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+            >
+              <Plus className="size-4" aria-hidden />
+              Add Credential
+            </button>
+          </div>
         </div>
       </div>
 

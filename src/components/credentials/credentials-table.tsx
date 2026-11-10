@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Copy, Eye, EyeOff, KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
-import { formatCredentialDateTime, formatCredentialType } from "@/components/credentials/constants";
+import { useState, type ReactNode } from "react";
+import { Check, Copy, Eye, EyeOff, KeyRound, Pencil, Plus, Shield, Trash2 } from "lucide-react";
+import {
+  credentialTypeBadgeClass,
+  formatCredentialDateTime,
+  formatCredentialType,
+  isEmailCredentialType,
+  isTwoFaCredentialType,
+} from "@/components/credentials/constants";
 import { copyTextToClipboard } from "@/lib/copy-to-clipboard";
 import { getSecureCredential } from "@/lib/secure-credentials-api";
 import { notify } from "@/lib/notify";
@@ -22,18 +28,54 @@ type CredentialsTableProps = {
 
 function TypeBadge({ type }: { type: SecureCredential["credential_type"] }) {
   return (
-    <span className="inline-flex rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+        credentialTypeBadgeClass(type),
+      )}
+    >
+      {isTwoFaCredentialType(type) ? <Shield className="size-3" aria-hidden /> : null}
       {formatCredentialType(type)}
     </span>
   );
 }
 
-function CopyButton({ value, label }: { value: string; label: string }) {
+function IconAction({
+  label,
+  onClick,
+  tone = "default",
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  tone?: "default" | "danger";
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className={cn(
+        "inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+        tone === "danger" &&
+          "hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 dark:hover:text-rose-400",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function CopyIconButton({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false);
 
   return (
     <button
       type="button"
+      title={copied ? "Copied" : `Copy ${label}`}
+      aria-label={copied ? "Copied" : `Copy ${label}`}
       onClick={() => {
         void copyTextToClipboard(value)
           .then(() => {
@@ -42,33 +84,33 @@ function CopyButton({ value, label }: { value: string; label: string }) {
           })
           .catch(() => notify.error(`Could not copy ${label}.`));
       }}
-      className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-xs font-medium text-foreground hover:bg-muted"
+      className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground"
     >
       {copied ? (
         <Check className="size-3.5 text-emerald-600" aria-hidden />
       ) : (
         <Copy className="size-3.5" aria-hidden />
       )}
-      {copied ? "Copied" : "Copy"}
     </button>
   );
 }
 
-function CredentialCard({
-  row,
-  onEdit,
-  onDelete,
-}: {
-  row: SecureCredential;
-  onEdit: (row: SecureCredential) => void;
-  onDelete: (row: SecureCredential) => void;
-}) {
+function UsernameCell({ username }: { username: string | null }) {
+  const value = username?.trim() || null;
+  if (!value) return <span className="text-muted-foreground">—</span>;
+  return (
+    <div className="flex min-w-0 items-center gap-0.5">
+      <span className="min-w-0 flex-1 truncate text-foreground">{value}</span>
+      <CopyIconButton value={value} label="username" />
+    </div>
+  );
+}
+
+function SecretCell({ row }: { row: SecureCredential }) {
   const [secret, setSecret] = useState<string | null>(row.secret);
   const [visible, setVisible] = useState(false);
   const [revealing, setRevealing] = useState(false);
-  const [secretCopied, setSecretCopied] = useState(false);
-  const username = row.username?.trim() || null;
-  const notes = row.notes?.trim() || null;
+  const isTwoFa = isTwoFaCredentialType(row.credential_type);
 
   async function loadSecret(): Promise<string | null> {
     if (secret) return secret;
@@ -100,114 +142,106 @@ function CredentialCard({
     if (!value) return;
     try {
       await copyTextToClipboard(value);
-      setSecretCopied(true);
-      window.setTimeout(() => setSecretCopied(false), 1200);
+      notify.success("Secret copied");
     } catch {
       notify.error("Could not copy secret.");
     }
   }
 
+  if (!row.has_secret) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
   return (
-    <article className="flex flex-col gap-3 rounded-xl border border-border/80 bg-card p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
+    <div
+      className={cn(
+        "flex min-w-0 items-center gap-0.5 rounded-lg border px-1.5 py-1",
+        isTwoFa ? "border-amber-500/20 bg-amber-500/[0.06]" : "border-border/70 bg-muted/40",
+      )}
+    >
+      <span className="min-w-0 flex-1 truncate font-mono text-xs tracking-wide text-foreground">
+        {visible && secret ? secret : "••••••••••••"}
+      </span>
+      <button
+        type="button"
+        title={visible ? "Hide secret" : "Show secret"}
+        aria-label={visible ? "Hide secret" : "Show secret"}
+        disabled={revealing}
+        onClick={() => void toggleSecret()}
+        className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground disabled:opacity-50"
+      >
+        {visible ? (
+          <EyeOff className="size-3.5" aria-hidden />
+        ) : (
+          <Eye className="size-3.5" aria-hidden />
+        )}
+      </button>
+      <button
+        type="button"
+        title="Copy secret"
+        aria-label="Copy secret"
+        disabled={revealing}
+        onClick={() => void copySecret()}
+        className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground disabled:opacity-50"
+      >
+        <Copy className="size-3.5" aria-hidden />
+      </button>
+    </div>
+  );
+}
+
+function MobileCredentialRow({
+  row,
+  onEdit,
+  onDelete,
+}: {
+  row: SecureCredential;
+  onEdit: (row: SecureCredential) => void;
+  onDelete: (row: SecureCredential) => void;
+}) {
+  const notes = row.notes?.trim() || null;
+
+  return (
+    <li className="space-y-3 border-b border-border/60 px-4 py-3.5 last:border-b-0">
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="mb-1.5 flex flex-wrap items-center gap-2">
+          <p className="truncate text-[15px] font-semibold text-foreground">{row.service_name}</p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
             <TypeBadge type={row.credential_type} />
-            <span className="text-xs text-muted-foreground">
+            <span className="text-[11px] text-muted-foreground">
               {formatCredentialDateTime(row.updated_at)}
             </span>
           </div>
-          <h3 className="truncate text-base font-semibold text-foreground">{row.service_name}</h3>
         </div>
-        <div className="flex shrink-0 gap-1">
-          <button
-            type="button"
-            onClick={() => onEdit(row)}
-            className="inline-flex h-8 items-center gap-1 rounded-lg border border-border px-2.5 text-xs font-medium text-foreground hover:bg-muted"
-          >
+        <div className="flex shrink-0">
+          <IconAction label="Edit credential" onClick={() => onEdit(row)}>
             <Pencil className="size-3.5" aria-hidden />
-            Edit
-          </button>
-          <button
-            type="button"
-            onClick={() => onDelete(row)}
-            className="inline-flex h-8 items-center gap-1 rounded-lg border border-rose-200 px-2.5 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:border-rose-900/60 dark:text-rose-400 dark:hover:bg-rose-950/40"
-          >
+          </IconAction>
+          <IconAction label="Delete credential" tone="danger" onClick={() => onDelete(row)}>
             <Trash2 className="size-3.5" aria-hidden />
-            Delete
-          </button>
+          </IconAction>
         </div>
       </div>
-
-      <dl className="space-y-2 text-sm">
-        <div className="flex items-center justify-between gap-3">
-          <dt className="w-20 shrink-0 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Username
-          </dt>
-          <dd className="flex min-w-0 flex-1 items-center justify-end gap-2">
-            <span
-              className={cn("truncate", username ? "text-foreground" : "text-muted-foreground")}
-            >
-              {username ?? "Not set"}
-            </span>
-            {username ? <CopyButton value={username} label="username" /> : null}
-          </dd>
+      <div className="space-y-2 text-sm">
+        <div className="grid grid-cols-[4.75rem_1fr] items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            {isTwoFaCredentialType(row.credential_type)
+              ? "Label"
+              : isEmailCredentialType(row.credential_type)
+                ? "Email"
+                : "User"}
+          </span>
+          <UsernameCell username={row.username} />
         </div>
-        <div className="flex items-center justify-between gap-3">
-          <dt className="w-20 shrink-0 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Secret
-          </dt>
-          <dd className="flex min-w-0 flex-1 items-center justify-end gap-2">
-            <span
-              className={cn(
-                "truncate font-mono text-xs",
-                row.has_secret ? "text-foreground" : "text-muted-foreground",
-              )}
-            >
-              {!row.has_secret ? "Not set" : visible && secret ? secret : "••••••••"}
-            </span>
-            {row.has_secret ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => void toggleSecret()}
-                  disabled={revealing}
-                  className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-60"
-                >
-                  {visible ? (
-                    <EyeOff className="size-3.5" aria-hidden />
-                  ) : (
-                    <Eye className="size-3.5" aria-hidden />
-                  )}
-                  {revealing ? "…" : visible ? "Hide" : "Show"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void copySecret()}
-                  disabled={revealing}
-                  className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-60"
-                >
-                  {secretCopied ? (
-                    <Check className="size-3.5 text-emerald-600" aria-hidden />
-                  ) : (
-                    <Copy className="size-3.5" aria-hidden />
-                  )}
-                  {secretCopied ? "Copied" : "Copy"}
-                </button>
-              </>
-            ) : null}
-          </dd>
+        <div className="grid grid-cols-[4.75rem_1fr] items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            {isTwoFaCredentialType(row.credential_type) ? "2FA" : "Secret"}
+          </span>
+          <SecretCell row={row} />
         </div>
-        {notes ? (
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Notes
-            </dt>
-            <dd className="mt-1 whitespace-pre-wrap text-sm text-foreground">{notes}</dd>
-          </div>
-        ) : null}
-      </dl>
-    </article>
+        {notes ? <p className="line-clamp-2 text-xs text-muted-foreground">{notes}</p> : null}
+      </div>
+    </li>
   );
 }
 
@@ -223,38 +257,41 @@ export function CredentialsTable({
 }: CredentialsTableProps) {
   if (!hasLoaded && loading) {
     return (
-      <div className="grid gap-3 sm:grid-cols-2">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-36 animate-pulse rounded-xl border border-border/60 bg-muted/40"
-          />
-        ))}
+      <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
+        <div className="h-12 animate-pulse border-b border-border/60 bg-muted/40" />
+        <div className="space-y-0">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-14 animate-pulse border-b border-border/40 bg-muted/20 last:border-b-0"
+            />
+          ))}
+        </div>
       </div>
     );
   }
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border px-6 py-12 text-center">
-        <KeyRound className="mb-3 size-8 text-muted-foreground" aria-hidden />
-        <p className="text-sm font-medium text-foreground">
-          {searchActive || filtersActive
-            ? "No credentials match these filters."
-            : "No credentials yet."}
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 bg-card/40 px-6 py-16 text-center">
+        <div className="mb-4 inline-flex size-14 items-center justify-center rounded-2xl border border-border/80 bg-muted/40 text-muted-foreground">
+          <KeyRound className="size-7" aria-hidden />
+        </div>
+        <p className="text-base font-semibold text-foreground">
+          {searchActive || filtersActive ? "Nothing matches these filters" : "Vault is empty"}
         </p>
-        <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-          Add a login, email, or API key. You can show and copy the secret from the card after it is
-          saved.
+        <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
+          Save a PC login, Gmail, Outlook, or 2FA key. Reveal and copy secrets from the table after
+          saving.
         </p>
         {!searchActive && !filtersActive ? (
           <button
             type="button"
             onClick={onAdd}
-            className="hover:bg-primary/92 mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground"
+            className="mt-5 inline-flex h-10 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
           >
             <Plus className="size-4" aria-hidden />
-            Add Credential
+            Add credential
           </button>
         ) : null}
       </div>
@@ -262,10 +299,73 @@ export function CredentialsTable({
   }
 
   return (
-    <div className="grid gap-3 xl:grid-cols-2">
-      {items.map((row) => (
-        <CredentialCard key={row.id} row={row} onEdit={onEdit} onDelete={onDelete} />
-      ))}
+    <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
+      <ul className="divide-y divide-border/60 md:hidden">
+        {items.map((row) => (
+          <MobileCredentialRow key={row.id} row={row} onEdit={onEdit} onDelete={onDelete} />
+        ))}
+      </ul>
+
+      <div className="hidden min-w-0 overflow-auto md:block">
+        <table className="w-full min-w-[48rem] border-collapse text-left text-sm">
+          <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-md">
+            <tr className="border-b border-border/80 text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
+              <th className="px-4 py-3 font-semibold">Service</th>
+              <th className="px-3 py-3 font-semibold">Type</th>
+              <th className="px-3 py-3 font-semibold">Email / username</th>
+              <th className="min-w-[12rem] px-3 py-3 font-semibold">Secret</th>
+              <th className="px-3 py-3 font-semibold">Updated</th>
+              <th className="px-4 py-3 text-right font-semibold">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((row, index) => (
+              <tr
+                key={row.id}
+                className={cn(
+                  "border-b border-border/50 transition-colors last:border-b-0 hover:bg-primary/[0.03]",
+                  index % 2 === 1 && "bg-muted/15",
+                )}
+              >
+                <td className="max-w-[16rem] px-4 py-3">
+                  <p className="truncate font-semibold text-foreground">{row.service_name}</p>
+                  {row.notes?.trim() ? (
+                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                      {row.notes.trim()}
+                    </p>
+                  ) : null}
+                </td>
+                <td className="px-3 py-3">
+                  <TypeBadge type={row.credential_type} />
+                </td>
+                <td className="max-w-[12rem] px-3 py-3">
+                  <UsernameCell username={row.username} />
+                </td>
+                <td className="max-w-[16rem] px-3 py-3">
+                  <SecretCell row={row} />
+                </td>
+                <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                  {formatCredentialDateTime(row.updated_at)}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <div className="inline-flex items-center justify-end gap-0.5">
+                    <IconAction label="Edit credential" onClick={() => onEdit(row)}>
+                      <Pencil className="size-3.5" aria-hidden />
+                    </IconAction>
+                    <IconAction
+                      label="Delete credential"
+                      tone="danger"
+                      onClick={() => onDelete(row)}
+                    >
+                      <Trash2 className="size-3.5" aria-hidden />
+                    </IconAction>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
