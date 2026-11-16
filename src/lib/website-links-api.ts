@@ -47,9 +47,7 @@ export async function listWebsiteLinks(q?: string): Promise<WebsiteLinkListRespo
   return { items, total };
 }
 
-export async function createWebsiteLink(
-  payload: WebsiteLinkCreateRequest,
-): Promise<WebsiteLink> {
+export async function createWebsiteLink(payload: WebsiteLinkCreateRequest): Promise<WebsiteLink> {
   const res = await fetchAuthed(BASE, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

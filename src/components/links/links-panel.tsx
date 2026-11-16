@@ -62,17 +62,13 @@ export function LinksPanel() {
     return Math.max(...items.map((r) => r.display_index)) + 1;
   }, [items]);
 
-  const handleCreate = async (
-    payload: WebsiteLinkCreateRequest | WebsiteLinkUpdateRequest,
-  ) => {
+  const handleCreate = async (payload: WebsiteLinkCreateRequest | WebsiteLinkUpdateRequest) => {
     await createWebsiteLink(payload as WebsiteLinkCreateRequest);
     notify.success("Link saved");
     await load();
   };
 
-  const handleUpdate = async (
-    payload: WebsiteLinkCreateRequest | WebsiteLinkUpdateRequest,
-  ) => {
+  const handleUpdate = async (payload: WebsiteLinkCreateRequest | WebsiteLinkUpdateRequest) => {
     if (!editing) return;
     await updateWebsiteLink(editing.id, payload as WebsiteLinkUpdateRequest);
     notify.success("Link updated");
@@ -229,10 +225,7 @@ export function LinksPanel() {
               <AlertTriangle className="mt-0.5 size-5 shrink-0 text-rose-500" aria-hidden />
               <p className="text-sm leading-relaxed text-foreground/90">
                 Permanently remove{" "}
-                <strong className="break-all font-semibold text-foreground">
-                  {deleting.url}
-                </strong>
-                ?
+                <strong className="break-all font-semibold text-foreground">{deleting.url}</strong>?
               </p>
             </div>
             {deleteError ? (
@@ -255,7 +248,9 @@ export function LinksPanel() {
                 disabled={deleteBusy}
                 className="inline-flex h-9 items-center gap-2 rounded-lg bg-rose-600 px-4 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
               >
-                {deleteBusy ? <Spinner className="size-3.5 border-white/30 border-t-white" /> : null}
+                {deleteBusy ? (
+                  <Spinner className="size-3.5 border-white/30 border-t-white" />
+                ) : null}
                 Delete
               </button>
             </div>

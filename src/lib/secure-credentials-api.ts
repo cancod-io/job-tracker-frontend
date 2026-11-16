@@ -275,9 +275,7 @@ export async function uploadCredentialQrImage(
   return normalizeCredential(raw);
 }
 
-export async function deleteCredentialQrImage(
-  credentialId: number,
-): Promise<SecureCredential> {
+export async function deleteCredentialQrImage(credentialId: number): Promise<SecureCredential> {
   const res = await fetchAuthed(`${BASE}/${credentialId}/qr-image`, {
     method: "DELETE",
   });
