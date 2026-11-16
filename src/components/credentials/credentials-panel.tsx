@@ -34,11 +34,13 @@ import {
 import { notify } from "@/lib/notify";
 import {
   createSecureCredential,
+  deleteCredentialQrImage,
   deleteSecureCredential,
   getCredentialTree,
   getSecureCredential,
   listSecureCredentials,
   updateSecureCredential,
+  uploadCredentialQrImage,
 } from "@/lib/secure-credentials-api";
 import { cn } from "@/lib/utils";
 import type {
@@ -47,6 +49,7 @@ import type {
   CredentialEmployerUpdateRequest,
   CredentialTreeResponse,
   CredentialType,
+  CredentialQrExtras,
   SecureCredential,
   SecureCredentialCreateRequest,
   SecureCredentialUpdateRequest,
@@ -187,10 +190,20 @@ export function CredentialsPanel() {
     setShowCreate(true);
   };
 
+  const applyQrExtras = async (credentialId: number, extras?: CredentialQrExtras) => {
+    if (extras?.qrFile) {
+      await uploadCredentialQrImage(credentialId, extras.qrFile);
+    } else if (extras?.removeQr) {
+      await deleteCredentialQrImage(credentialId);
+    }
+  };
+
   const handleCreate = async (
     payload: SecureCredentialCreateRequest | SecureCredentialUpdateRequest,
+    extras?: CredentialQrExtras,
   ) => {
-    await createSecureCredential(payload as SecureCredentialCreateRequest);
+    const created = await createSecureCredential(payload as SecureCredentialCreateRequest);
+    await applyQrExtras(created.id, extras);
     notify.success("Credential saved");
     await load();
   };
@@ -198,8 +211,10 @@ export function CredentialsPanel() {
   const handleUpdate = async (
     id: number,
     payload: SecureCredentialCreateRequest | SecureCredentialUpdateRequest,
+    extras?: CredentialQrExtras,
   ) => {
     await updateSecureCredential(id, payload as SecureCredentialUpdateRequest);
+    await applyQrExtras(id, extras);
     notify.success("Credential updated");
     await load();
   };
@@ -528,7 +543,7 @@ export function CredentialsPanel() {
           initial={editing}
           employerOptions={employers}
           onClose={() => setEditing(null)}
-          onSubmit={(payload) => handleUpdate(editing.id, payload)}
+          onSubmit={(payload, extras) => handleUpdate(editing.id, payload, extras)}
           onCreateEmployerInline={handleInlineEmployer}
         />
       ) : null}

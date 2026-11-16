@@ -31,6 +31,7 @@ export type SecureCredential = {
   has_username: boolean;
   has_secret: boolean;
   has_notes: boolean;
+  has_qr_image: boolean;
   created_by_name: string | null;
   updated_by_name: string | null;
   created_at: string;
@@ -51,7 +52,8 @@ export type SecureCredentialCreateRequest = {
   vault_scope?: VaultScope;
   employer_id?: number | null;
   username?: string | null;
-  secret: string;
+  /** Required except for two_fa_key when a QR image will be uploaded. */
+  secret?: string | null;
   notes?: string | null;
 };
 
@@ -67,6 +69,14 @@ export type SecureCredentialUpdateRequest = {
   notes?: string | null;
   clear_username?: boolean;
   clear_notes?: boolean;
+  clear_secret?: boolean;
+  clear_qr_image?: boolean;
+};
+
+/** Extra files/actions handled after create/update JSON. */
+export type CredentialQrExtras = {
+  qrFile?: File | null;
+  removeQr?: boolean;
 };
 
 export type CredentialEmployer = {

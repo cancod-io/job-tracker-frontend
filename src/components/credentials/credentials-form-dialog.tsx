@@ -10,9 +10,11 @@ import {
 } from "@/components/credentials/constants";
 import { Modal } from "@/components/ui/modal";
 import { Spinner } from "@/components/ui/spinner";
+import { fetchCredentialQrBlob } from "@/lib/secure-credentials-api";
 import { cn } from "@/lib/utils";
 import type {
   CredentialEmployer,
+  CredentialQrExtras,
   CredentialType,
   SecureCredential,
   SecureCredentialCreateRequest,
@@ -35,6 +37,7 @@ type CredentialsFormDialogProps = {
   onClose: () => void;
   onSubmit: (
     payload: SecureCredentialCreateRequest | SecureCredentialUpdateRequest,
+    extras?: CredentialQrExtras,
   ) => Promise<void>;
   onCreateEmployerInline?: (name: string) => Promise<CredentialEmployer>;
 };
@@ -120,6 +123,9 @@ export function CredentialsFormDialog({
   const [localEmployers, setLocalEmployers] = useState(employerOptions);
   const [newEmployerName, setNewEmployerName] = useState("");
   const [creatingEmployer, setCreatingEmployer] = useState(false);
+  const [qrFile, setQrFile] = useState<File | null>(null);
+  const [qrPreviewUrl, setQrPreviewUrl] = useState<string | null>(null);
+  const [removeQr, setRemoveQr] = useState(false);
 
   useEffect(() => {
     setLocalEmployers(employerOptions);
@@ -143,7 +149,46 @@ export function CredentialsFormDialog({
     setClearNotes(false);
     setSubmitError(null);
     setNewEmployerName("");
+    setQrFile(null);
+    setRemoveQr(false);
   }, [initial, mode, defaults]);
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
+
+    if (qrFile) {
+      objectUrl = URL.createObjectURL(qrFile);
+      setQrPreviewUrl(objectUrl);
+      return () => {
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+      };
+    }
+
+    if (
+      mode === "edit" &&
+      initial?.has_qr_image &&
+      !removeQr &&
+      isTwoFaCredentialType(initial.credential_type)
+    ) {
+      void fetchCredentialQrBlob(initial.id)
+        .then((blob) => {
+          if (cancelled) return;
+          objectUrl = URL.createObjectURL(blob);
+          setQrPreviewUrl(objectUrl);
+        })
+        .catch(() => {
+          if (!cancelled) setQrPreviewUrl(null);
+        });
+    } else {
+      setQrPreviewUrl(null);
+    }
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [qrFile, mode, initial, removeQr]);
 
   function clearSecretFields() {
     setUsername("");
@@ -152,6 +197,8 @@ export function CredentialsFormDialog({
     setNotes("");
     setClearUsername(false);
     setClearNotes(false);
+    setQrFile(null);
+    setRemoveQr(false);
   }
 
   function validate(): string | null {
@@ -166,12 +213,21 @@ export function CredentialsFormDialog({
         return "Job credentials require an employer folder.";
       }
     }
+    const trimmedSecret = secret.trim();
+    if (trimmedSecret.length > 8000) return "Secret must be at most 8000 characters.";
+    const isTwoFa = isTwoFaCredentialType(credentialType);
     if (mode === "create") {
-      const trimmedSecret = secret.trim();
-      if (!trimmedSecret) return "Secret is required.";
-      if (trimmedSecret.length > 8000) return "Secret must be at most 8000 characters.";
-    } else if (secret.trim().length > 8000) {
-      return "Secret must be at most 8000 characters.";
+      if (!isTwoFa && !trimmedSecret) return "Secret is required.";
+      if (isTwoFa && !trimmedSecret && !qrFile) {
+        return "Add a 2FA secret key and/or a QR image.";
+      }
+    } else if (isTwoFa) {
+      const hasSecretMaterial = Boolean(trimmedSecret) || Boolean(initial?.has_secret);
+      const hasQrMaterial =
+        Boolean(qrFile) || (Boolean(initial?.has_qr_image) && !removeQr);
+      if (!hasSecretMaterial && !hasQrMaterial) {
+        return "2FA credentials need a secret key and/or a QR image.";
+      }
     }
     return null;
   }
@@ -213,19 +269,26 @@ export function CredentialsFormDialog({
 
     setSubmitting(true);
     try {
+      const extras: CredentialQrExtras = {};
+      if (isTwoFaCredentialType(credentialType)) {
+        if (qrFile) extras.qrFile = qrFile;
+        if (removeQr && !qrFile) extras.removeQr = true;
+      }
+
       if (mode === "create") {
         const payload: SecureCredentialCreateRequest = {
           service_name: serviceName.trim(),
           credential_type: credentialType,
           vault_scope: vaultScope,
-          secret: secret.trim(),
         };
+        const trimmedSecret = secret.trim();
+        if (trimmedSecret) payload.secret = trimmedSecret;
         if (vaultScope === "job") payload.employer_id = Number(employerId);
         const trimmedUsername = username.trim();
         if (trimmedUsername) payload.username = trimmedUsername;
         const trimmedNotes = notes.trim();
         if (trimmedNotes) payload.notes = trimmedNotes;
-        await onSubmit(payload);
+        await onSubmit(payload, extras);
       } else {
         const payload: SecureCredentialUpdateRequest = {
           service_name: serviceName.trim(),
@@ -256,7 +319,7 @@ export function CredentialsFormDialog({
           const trimmedNotes = notes.trim();
           if (trimmedNotes) payload.notes = trimmedNotes;
         }
-        await onSubmit(payload);
+        await onSubmit(payload, extras);
       }
       clearSecretFields();
       onClose();
@@ -448,13 +511,16 @@ export function CredentialsFormDialog({
 
         <div className="space-y-1.5">
           <label htmlFor="credential-secret" className="text-xs font-semibold">
-            {secretCopy.label} {isCreate ? <span className="text-rose-500">*</span> : null}
+            {secretCopy.label}{" "}
+            {isCreate && !isTwoFaCredentialType(credentialType) ? (
+              <span className="text-rose-500">*</span>
+            ) : null}
           </label>
           <SecretInput
             id="credential-secret"
             value={secret}
             onChange={setSecret}
-            required={isCreate}
+            required={isCreate && !isTwoFaCredentialType(credentialType)}
             placeholder={
               isCreate
                 ? secretCopy.placeholderCreate
@@ -464,13 +530,61 @@ export function CredentialsFormDialog({
             }
           />
           <p className="text-xs text-muted-foreground">
-            {isCreate
-              ? secretCopy.hint
-              : secret
-                ? "Use the eye icon to show or hide. Leave unchanged to keep it."
-                : secretCopy.placeholderEdit}
+            {isTwoFaCredentialType(credentialType)
+              ? isCreate
+                ? "Optional if you upload a QR image instead. Stored as reference — not used to generate codes."
+                : "Leave blank to keep the existing secret. You can also attach a QR image below."
+              : isCreate
+                ? secretCopy.hint
+                : secret
+                  ? "Use the eye icon to show or hide. Leave unchanged to keep it."
+                  : secretCopy.placeholderEdit}
           </p>
         </div>
+
+        {isTwoFaCredentialType(credentialType) ? (
+          <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-3">
+            <label htmlFor="credential-qr" className="text-xs font-semibold">
+              QR code image
+            </label>
+            <p className="text-xs text-muted-foreground">
+              Stored for reference only. The image is never scanned for a TOTP secret.
+            </p>
+            <input
+              id="credential-qr"
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp,.png,.jpg,.jpeg,.gif,.webp"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                setQrFile(file);
+                if (file) setRemoveQr(false);
+              }}
+              className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-primary-foreground"
+            />
+            {qrPreviewUrl && !removeQr ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={qrPreviewUrl}
+                alt="2FA QR preview"
+                className="mt-2 max-h-40 rounded-md border border-border bg-white object-contain p-2"
+              />
+            ) : null}
+            {!isCreate && initial?.has_qr_image ? (
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={removeQr}
+                  onChange={(e) => {
+                    setRemoveQr(e.target.checked);
+                    if (e.target.checked) setQrFile(null);
+                  }}
+                  className="size-3.5 accent-primary"
+                />
+                Remove stored QR image
+              </label>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="space-y-1.5">
           <label htmlFor="credential-notes" className="text-xs font-semibold">

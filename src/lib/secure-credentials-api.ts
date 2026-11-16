@@ -100,6 +100,7 @@ export function normalizeCredential(
     has_username: raw.has_username === true || Boolean(username),
     has_secret: raw.has_secret === true || Boolean(secret),
     has_notes: raw.has_notes === true || Boolean(notes?.trim()),
+    has_qr_image: raw.has_qr_image === true,
     created_by_name: normalizeNullableString(raw.created_by_name),
     updated_by_name: normalizeNullableString(raw.updated_by_name),
     created_at: typeof raw.created_at === "string" ? raw.created_at : new Date(0).toISOString(),
@@ -254,4 +255,40 @@ export async function deleteSecureCredential(credentialId: number): Promise<void
     method: "DELETE",
   });
   await assertOkResponse(res, "Could not delete credential.");
+}
+
+const UPLOAD_TIMEOUT_MS = 60_000;
+
+export async function uploadCredentialQrImage(
+  credentialId: number,
+  file: File,
+): Promise<SecureCredential> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetchAuthed(
+    `${BASE}/${credentialId}/qr-image`,
+    { method: "POST", body: formData },
+    UPLOAD_TIMEOUT_MS,
+  );
+  await assertOkResponse(res, "Could not upload QR image.");
+  const raw = (await res.json()) as Partial<SecureCredential> & { id: number };
+  return normalizeCredential(raw);
+}
+
+export async function deleteCredentialQrImage(
+  credentialId: number,
+): Promise<SecureCredential> {
+  const res = await fetchAuthed(`${BASE}/${credentialId}/qr-image`, {
+    method: "DELETE",
+  });
+  await assertOkResponse(res, "Could not remove QR image.");
+  const raw = (await res.json()) as Partial<SecureCredential> & { id: number };
+  return normalizeCredential(raw);
+}
+
+/** Fetch QR image bytes (authenticated) for preview. */
+export async function fetchCredentialQrBlob(credentialId: number): Promise<Blob> {
+  const res = await fetchAuthed(`${BASE}/${credentialId}/qr-image`);
+  await assertOkResponse(res, "Could not load QR image.");
+  return res.blob();
 }
