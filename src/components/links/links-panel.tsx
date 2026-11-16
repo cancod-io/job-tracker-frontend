@@ -57,11 +57,6 @@ export function LinksPanel() {
     });
   }, [items, search]);
 
-  const nextIndex = useMemo(() => {
-    if (items.length === 0) return 1;
-    return Math.max(...items.map((r) => r.display_index)) + 1;
-  }, [items]);
-
   const handleCreate = async (payload: WebsiteLinkCreateRequest | WebsiteLinkUpdateRequest) => {
     await createWebsiteLink(payload as WebsiteLinkCreateRequest);
     notify.success("Link saved");
@@ -197,7 +192,6 @@ export function LinksPanel() {
       {showCreate ? (
         <LinksFormDialog
           mode="create"
-          defaultIndex={nextIndex}
           onClose={() => setShowCreate(false)}
           onSubmit={handleCreate}
         />
