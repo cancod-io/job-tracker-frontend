@@ -6,15 +6,13 @@ export type CredentialType =
   | "outlook"
   | "company_email"
   | "two_fa_key"
+  | "linkedin"
+  | "anydesk"
+  | "whatsapp"
   | "other";
 
 export type VaultScope = "personal" | "job";
 
-/**
- * List/detail response.
- * Username and notes may be returned in plaintext; secret is optional (present on detail
- * for reveal in the edit form). Never render secret in the list table.
- */
 export type SecureCredential = {
   id: number;
   owner_user_id: number;
@@ -22,11 +20,13 @@ export type SecureCredential = {
   vault_scope: VaultScope;
   employer_id: number | null;
   employer_name: string | null;
+  identity_id: number | null;
+  identity_name: string | null;
+  identity_country_code: string | null;
   service_name: string;
   credential_type: CredentialType;
   username: string | null;
   notes: string | null;
-  /** Present when the API returns it (e.g. detail); used only for edit reveal. */
   secret: string | null;
   has_username: boolean;
   has_secret: boolean;
@@ -45,25 +45,25 @@ export type SecureCredentialListResponse = {
   page_size: number;
 };
 
-/** Payload for `POST /api/v1/credentials`. */
 export type SecureCredentialCreateRequest = {
   service_name: string;
   credential_type?: CredentialType;
   vault_scope?: VaultScope;
   employer_id?: number | null;
+  identity_id?: number | null;
   username?: string | null;
-  /** Required except for two_fa_key when a QR image will be uploaded. */
   secret?: string | null;
   notes?: string | null;
 };
 
-/** Payload for `PUT /api/v1/credentials/{id}` — omit `secret` to keep existing. */
 export type SecureCredentialUpdateRequest = {
   service_name?: string;
   credential_type?: CredentialType;
   vault_scope?: VaultScope;
   employer_id?: number | null;
   clear_employer?: boolean;
+  identity_id?: number | null;
+  clear_identity?: boolean;
   username?: string | null;
   secret?: string;
   notes?: string | null;
@@ -73,7 +73,6 @@ export type SecureCredentialUpdateRequest = {
   clear_qr_image?: boolean;
 };
 
-/** Extra files/actions handled after create/update JSON. */
 export type CredentialQrExtras = {
   qrFile?: File | null;
   removeQr?: boolean;
@@ -113,6 +112,47 @@ export type CredentialEmployerUpdateRequest = {
   clear_notes?: boolean;
 };
 
+export type CredentialIdentity = {
+  id: number;
+  owner_user_id: number;
+  owner_name: string | null;
+  display_name: string;
+  country_code: string | null;
+  notes: string | null;
+  credential_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CredentialIdentityListResponse = {
+  items: CredentialIdentity[];
+  total: number;
+};
+
+export type CredentialIdentityCreateRequest = {
+  display_name: string;
+  country_code?: string | null;
+  notes?: string | null;
+};
+
+export type CredentialIdentityUpdateRequest = {
+  display_name?: string;
+  country_code?: string | null;
+  notes?: string | null;
+  clear_country_code?: boolean;
+  clear_notes?: boolean;
+};
+
+export type CredentialTreeIdentityNode = {
+  id: number;
+  display_name: string;
+  country_code: string | null;
+  notes: string | null;
+  count: number;
+  items: SecureCredential[];
+  missing_slots: CredentialType[];
+};
+
 export type CredentialTreeEmployerNode = {
   id: number;
   name: string;
@@ -128,6 +168,13 @@ export type CredentialTreeResponse = {
   owner_name: string | null;
   personal: {
     count: number;
+    accounts: {
+      identity_count: number;
+      credential_count: number;
+      identities: CredentialTreeIdentityNode[];
+    };
+    devices: { count: number; items: SecureCredential[] };
+    apps: { count: number; items: SecureCredential[] };
     items: SecureCredential[];
   };
   jobs: {

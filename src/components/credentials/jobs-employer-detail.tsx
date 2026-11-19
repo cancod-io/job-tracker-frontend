@@ -30,6 +30,9 @@ const TYPE_ICONS: Record<CredentialType, typeof Monitor> = {
   outlook: Mail,
   company_email: Mail,
   two_fa_key: Shield,
+  linkedin: KeyRound,
+  anydesk: Monitor,
+  whatsapp: KeyRound,
   other: KeyRound,
 };
 
