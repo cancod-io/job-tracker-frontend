@@ -27,6 +27,9 @@ type Mode = "create" | "edit";
 export type CredentialFormDefaults = {
   vaultScope?: VaultScope;
   employerId?: number | null;
+  identityId?: number | null;
+  credentialType?: CredentialType;
+  serviceName?: string;
 };
 
 type CredentialsFormDialogProps = {
@@ -99,10 +102,13 @@ export function CredentialsFormDialog({
   onSubmit,
   onCreateEmployerInline,
 }: CredentialsFormDialogProps) {
-  const [serviceName, setServiceName] = useState(initial?.service_name ?? "");
-  const [credentialType, setCredentialType] = useState<CredentialType>(
-    initial?.credential_type ?? "other",
+  const [serviceName, setServiceName] = useState(
+    initial?.service_name ?? defaults?.serviceName ?? "",
   );
+  const [credentialType, setCredentialType] = useState<CredentialType>(
+    initial?.credential_type ?? defaults?.credentialType ?? "other",
+  );
+  const identityId = String(initial?.identity_id ?? defaults?.identityId ?? "");
   const [vaultScope, setVaultScope] = useState<VaultScope>(
     initial?.vault_scope ?? defaults?.vaultScope ?? "personal",
   );
@@ -132,8 +138,8 @@ export function CredentialsFormDialog({
   }, [employerOptions]);
 
   useEffect(() => {
-    setServiceName(initial?.service_name ?? "");
-    setCredentialType(initial?.credential_type ?? "other");
+    setServiceName(initial?.service_name ?? defaults?.serviceName ?? "");
+    setCredentialType(initial?.credential_type ?? defaults?.credentialType ?? "other");
     setVaultScope(initial?.vault_scope ?? defaults?.vaultScope ?? "personal");
     setEmployerId(
       String(
@@ -283,6 +289,10 @@ export function CredentialsFormDialog({
         const trimmedSecret = secret.trim();
         if (trimmedSecret) payload.secret = trimmedSecret;
         if (vaultScope === "job") payload.employer_id = Number(employerId);
+        const resolvedIdentity = Number(identityId);
+        if (Number.isFinite(resolvedIdentity) && resolvedIdentity > 0) {
+          payload.identity_id = resolvedIdentity;
+        }
         const trimmedUsername = username.trim();
         if (trimmedUsername) payload.username = trimmedUsername;
         const trimmedNotes = notes.trim();
@@ -299,6 +309,10 @@ export function CredentialsFormDialog({
           payload.employer_id = null;
         } else {
           payload.employer_id = Number(employerId);
+        }
+        const resolvedIdentity = Number(identityId);
+        if (Number.isFinite(resolvedIdentity) && resolvedIdentity > 0) {
+          payload.identity_id = resolvedIdentity;
         }
         if (clearUsername) {
           payload.clear_username = true;
@@ -331,6 +345,9 @@ export function CredentialsFormDialog({
 
   const isCreate = mode === "create";
   const secretCopy = secretFieldCopy(credentialType);
+  const lockType = Boolean(isCreate && defaults?.credentialType);
+  const lockToIdentity = Boolean(isCreate && defaults?.identityId);
+  const hideScopePicker = lockToIdentity || Boolean(isCreate && defaults?.employerId);
 
   return (
     <Modal
@@ -338,7 +355,9 @@ export function CredentialsFormDialog({
       title={isCreate ? "Add Credential" : "Edit Credential"}
       description={
         isCreate
-          ? "Choose Personal or Job scope, then store the login or key."
+          ? lockToIdentity
+            ? "Fill this account slot for the selected identity."
+            : "Choose Personal or Job scope, then store the login or key."
           : `Update ${initial?.service_name ?? "credential"}. Leave secret blank to keep the existing value.`
       }
       onClose={onClose}
@@ -350,38 +369,40 @@ export function CredentialsFormDialog({
         autoComplete="off"
         noValidate
       >
-        <div className="space-y-1.5">
-          <p className="text-xs font-semibold">Scope</p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setVaultScope("personal");
-                setEmployerId("");
-              }}
-              className={cn(
-                "rounded-lg border px-3 py-2 text-sm font-semibold",
-                vaultScope === "personal"
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card hover:bg-muted",
-              )}
-            >
-              Personal
-            </button>
-            <button
-              type="button"
-              onClick={() => setVaultScope("job")}
-              className={cn(
-                "rounded-lg border px-3 py-2 text-sm font-semibold",
-                vaultScope === "job"
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card hover:bg-muted",
-              )}
-            >
-              Job
-            </button>
+        {!hideScopePicker ? (
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold">Scope</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setVaultScope("personal");
+                  setEmployerId("");
+                }}
+                className={cn(
+                  "rounded-lg border px-3 py-2 text-sm font-semibold",
+                  vaultScope === "personal"
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card hover:bg-muted",
+                )}
+              >
+                Personal
+              </button>
+              <button
+                type="button"
+                onClick={() => setVaultScope("job")}
+                className={cn(
+                  "rounded-lg border px-3 py-2 text-sm font-semibold",
+                  vaultScope === "job"
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card hover:bg-muted",
+                )}
+              >
+                Job
+              </button>
+            </div>
           </div>
-        </div>
+        ) : null}
 
         {vaultScope === "job" ? (
           <div className="space-y-2">
@@ -446,7 +467,8 @@ export function CredentialsFormDialog({
             id="credential-type"
             value={credentialType}
             onChange={(e) => setCredentialType(e.target.value as CredentialType)}
-            className="form-control w-full"
+            disabled={lockType}
+            className="form-control w-full disabled:opacity-70"
           >
             {CREDENTIAL_TYPE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
